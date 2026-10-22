@@ -1,0 +1,38 @@
+name: End-to-end
+
+# Runs the Playwright workflows against the live deployment: on demand, and
+# nightly so a regression in production is noticed even without a push.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Site to test"
+        required: false
+        default: "https://festa-ten-blush.vercel.app"
+  schedule:
+    - cron: "30 21 * * *" # 03:00 IST
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          E2E_BASE_URL: ${{ inputs.base_url || 'https://festa-ten-blush.vercel.app' }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7

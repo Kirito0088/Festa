@@ -95,12 +95,14 @@ flowchart LR
 - Event tabs switch without data skeletons.
 - The heavier forms load on demand, and the budget chart draws after the page.
 - Functions run in Mumbai, close to users.
+- Lighthouse on the live landing page scores 100 for Performance, Accessibility, Best Practices and SEO on desktop. On a simulated slow phone it scores 91 for Performance and 100 for the rest.
 
 **Testing.** Run `npm test` for the full suite, and `npm test -- --coverage` for v8 coverage.
 
 - Vitest unit tests cover money, budget, dates, tasks, the run sheet, calendar files, the plan note, colour contrast, AI parsing and the concierge.
 - convex-test integration tests cover authorization boundaries, validation, the plan pipeline, the concierge's approval flow, demo seeding, rate limits and the day-of schedule.
-- CI runs typecheck, lint, the format check, the tests with coverage and a production build on every push.
+- Playwright end-to-end tests (`npm run test:e2e`) walk the main workflows on the live site: opening the demo, every section, budget validation and a new line, completing a task, the reminders download, the day-of run sheet, booking a vendor and a concierge reply. A second suite covers the landing story, reduced motion, phone width and sign-in errors.
+- CI runs typecheck, lint, the format check, the tests with coverage and a production build on every push. The end-to-end suite runs nightly against production, or on demand.
 
 ## Run it locally
 

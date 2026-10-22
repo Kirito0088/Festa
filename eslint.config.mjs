@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     ".playwright-mcp/**",
     // Test coverage reports.
     "coverage/**",
+    // Playwright output.
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

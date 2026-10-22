@@ -49,3 +49,5 @@ next-env.d.ts
 /.claude/
 /.playwright-mcp/
 /skills-lock.json
+/test-results/
+/playwright-report/
