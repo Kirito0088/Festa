@@ -31,7 +31,7 @@ export async function requireOwnedEvent(
   return { userId, event };
 }
 
-type OwnedTable = "budgetItems" | "tasks" | "vendors" | "moodboardItems" | "conciergeMessages";
+type OwnedTable = "budgetItems" | "tasks" | "vendors" | "moodboardItems" | "conciergeMessages" | "scheduleItems";
 
 export async function requireOwnedDoc<T extends OwnedTable>(
   ctx: QueryCtx | MutationCtx,

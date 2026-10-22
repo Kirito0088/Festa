@@ -409,3 +409,40 @@ describe("rate limits", () => {
     await expect(task("One too many")).rejects.toThrow(/very quickly/);
   });
 });
+
+describe("day-of schedule", () => {
+  it("drafts a run sheet with the plan and keeps it editable and private", async () => {
+    const t = setup();
+    const owner = await createUser(t);
+    const eventId = await createEvent(owner, t);
+
+    const sheet = await owner.as.query(api.schedule.list, { eventId });
+    expect(sheet.length).toBeGreaterThan(3);
+    expect(sheet.map((item) => item.title)).toContain("Ring ceremony");
+
+    const id = await owner.as.mutation(api.schedule.create, {
+      eventId,
+      time: "23:30",
+      title: "Fireworks",
+      notes: "",
+    });
+    await owner.as.mutation(api.schedule.update, { itemId: id, time: "00:15" });
+    const updated = await owner.as.query(api.schedule.list, { eventId });
+    // After midnight still sorts to the end of the night.
+    expect(updated.at(-1)?.title).toBe("Fireworks");
+
+    await expect(
+      owner.as.mutation(api.schedule.create, { eventId, time: "7pm", title: "Bad time", notes: "" }),
+    ).rejects.toThrow(/24-hour time/);
+    await expect(
+      owner.as.mutation(api.schedule.create, { eventId, time: "19:00", title: "  ", notes: "" }),
+    ).rejects.toThrow();
+
+    const stranger = await createUser(t);
+    await expect(stranger.as.query(api.schedule.list, { eventId })).rejects.toThrow();
+    await expect(stranger.as.mutation(api.schedule.remove, { itemId: id })).rejects.toThrow();
+
+    await owner.as.mutation(api.schedule.remove, { itemId: id });
+    expect((await owner.as.query(api.schedule.list, { eventId })).some((item) => item._id === id)).toBe(false);
+  });
+});

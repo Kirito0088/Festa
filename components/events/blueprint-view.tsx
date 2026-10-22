@@ -192,7 +192,7 @@ export function BlueprintView() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel
           title="Suggested budget split"
-          description="Shares of your total. Festa turned these into the amounts in Budget Studio."
+          description="Estimates only: suggested shares of your total, which Festa turned into starting amounts in Budget Studio. Real quotes will differ."
         >
           <ul className="grid gap-3.5">
             {content.budget.map((line) => (

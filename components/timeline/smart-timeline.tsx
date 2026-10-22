@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useMutation, useQuery } from "convex/react";
-import { CalendarCheck2, Plus } from "lucide-react";
+import { BellRing, CalendarCheck2, Plus } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -34,6 +34,7 @@ import { useToday } from "@/hooks/use-today";
 import { CATEGORIES, CATEGORY_LABELS, PRIORITIES, PRIORITY_LABELS } from "@/lib/constants";
 import { daysBetween } from "@/lib/dates";
 import { errorMessage } from "@/lib/errors";
+import { remindersCalendar } from "@/lib/ics";
 import {
   DEADLINE_GROUP_LABELS,
   deadlineGroup,
@@ -122,6 +123,33 @@ export function SmartTimeline() {
   }, [visible, sort, today]);
 
   const doneCount = resolved?.filter((task) => task.completed).length ?? 0;
+  const remindable = resolved?.filter((task) => !task.completed && task.due) ?? [];
+
+  // Every open, dated task as one calendar file, with an alert the evening before each.
+  function downloadReminders() {
+    const file = remindersCalendar({
+      eventName: event.name,
+      tasks: remindable.map((task) => ({
+        id: task._id,
+        title: task.title,
+        due: task.due!,
+        notes: task.notes,
+      })),
+      now: new Date(),
+    });
+    const url = URL.createObjectURL(new Blob([file], { type: "text/calendar;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${
+      event.name
+        .replace(/[^\w-]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase() || "festa"
+    }-reminders.ics`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${remindable.length} reminders ready to import into your calendar.`);
+  }
 
   function openTask(task: Doc<"tasks"> | null) {
     setEditing(task);
@@ -170,9 +198,14 @@ export function SmartTimeline() {
             {resolved ? `${doneCount} of ${resolved.length} tasks done` : "Loading tasks…"}
           </p>
         </div>
-        <Button onClick={() => openTask(null)}>
-          <Plus aria-hidden="true" /> Add task
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={downloadReminders} disabled={remindable.length === 0}>
+            <BellRing aria-hidden="true" /> Calendar reminders
+          </Button>
+          <Button onClick={() => openTask(null)}>
+            <Plus aria-hidden="true" /> Add task
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

@@ -8,6 +8,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip";
 import { Field, fieldAria } from "@/components/ui/field";
@@ -60,6 +61,24 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+function valuesFrom(event: Doc<"events">): Values {
+  return {
+    name: event.name,
+    type: event.type,
+    date: event.date,
+    city: event.city,
+    venue: event.venue,
+    budget: event.budget,
+    currency: event.currency as Values["currency"],
+    guestCount: event.guestCount,
+    styles: event.styles,
+    atmosphere: event.atmosphere,
+    foodPreferences: event.foodPreferences,
+    activities: event.activities,
+    notes: event.notes,
+  };
+}
+
 export function EventSettingsDialog({
   open,
   onOpenChange,
@@ -70,7 +89,7 @@ export function EventSettingsDialog({
   const { event } = useEventContext();
   const update = useMutation(api.events.update);
 
-  const form = useForm<Values>({ resolver: zodResolver(schema) });
+  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: valuesFrom(event) });
   const {
     register,
     control,
@@ -81,22 +100,7 @@ export function EventSettingsDialog({
 
   // Load the latest saved values each time the sheet opens.
   useEffect(() => {
-    if (!open) return;
-    reset({
-      name: event.name,
-      type: event.type,
-      date: event.date,
-      city: event.city,
-      venue: event.venue,
-      budget: event.budget,
-      currency: event.currency as Values["currency"],
-      guestCount: event.guestCount,
-      styles: event.styles,
-      atmosphere: event.atmosphere,
-      foodPreferences: event.foodPreferences,
-      activities: event.activities,
-      notes: event.notes,
-    });
+    if (open) reset(valuesFrom(event));
   }, [open, event, reset]);
 
   const type = useWatch({ control, name: "type" }) ?? event.type;

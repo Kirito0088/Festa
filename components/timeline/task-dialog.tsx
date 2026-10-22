@@ -57,6 +57,22 @@ const schema = z
 
 type Values = z.infer<typeof schema>;
 
+/** Form values for a task, or the defaults for a new one. */
+function valuesFor(task: Doc<"tasks"> | null): Values {
+  const offset = task?.offsetDays ?? 14;
+  const inWeeks = offset >= 14 && offset % 7 === 0;
+  return {
+    title: task?.title ?? "",
+    notes: task?.notes ?? "",
+    category: task?.category ?? "other",
+    priority: task?.priority ?? "medium",
+    dueMode: task?.dueMode ?? "relative",
+    offsetAmount: inWeeks ? offset / 7 : offset,
+    offsetUnit: inWeeks ? "weeks" : "days",
+    dueDate: task?.dueDate ?? "",
+  };
+}
+
 function toOffsetDays(values: Values): number {
   return values.offsetAmount * (values.offsetUnit === "weeks" ? 7 : 1);
 }
@@ -82,22 +98,10 @@ export function TaskDialog({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema) });
+  } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: valuesFor(task) });
 
   useEffect(() => {
-    if (!open) return;
-    const offset = task?.offsetDays ?? 14;
-    const inWeeks = offset >= 14 && offset % 7 === 0;
-    reset({
-      title: task?.title ?? "",
-      notes: task?.notes ?? "",
-      category: task?.category ?? "other",
-      priority: task?.priority ?? "medium",
-      dueMode: task?.dueMode ?? "relative",
-      offsetAmount: inWeeks ? offset / 7 : offset,
-      offsetUnit: inWeeks ? "weeks" : "days",
-      dueDate: task?.dueDate ?? "",
-    });
+    if (open) reset(valuesFor(task));
   }, [open, task, reset]);
 
   const values = useWatch({ control });

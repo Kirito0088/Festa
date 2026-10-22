@@ -3,6 +3,7 @@ import type { Category } from "../lib/constants";
 import { shiftIsoDate } from "../lib/dates";
 import { unsplashUrl } from "../lib/inspiration";
 import { materializePlan } from "../lib/plan/materialize";
+import { daySchedule } from "../lib/plan/run-sheet";
 import { templateBlueprint, type PlanInput } from "../lib/plan/template";
 import type { Id } from "./_generated/dataModel";
 import { mutation } from "./_generated/server";
@@ -215,6 +216,9 @@ export const start = mutation({
         order: (index + 1) * 1000,
         source: "sample",
       });
+    }
+    for (const entry of daySchedule(input)) {
+      await ctx.db.insert("scheduleItems", { eventId, ownerId: userId, ...entry, source: "sample" });
     }
 
     for (const vendor of SAMPLE_VENDORS) {

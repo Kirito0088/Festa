@@ -42,6 +42,22 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+function valuesFor(item: Doc<"budgetItems"> | null): Values {
+  if (item) {
+    const { name, category, estimated, actual, paid, notes } = item;
+    return { name, category, estimated, actual, paid, notes };
+  }
+  // The estimate stays empty until typed; the schema then asks for an amount.
+  return {
+    name: "",
+    category: "venue",
+    estimated: undefined as unknown as number,
+    actual: null,
+    paid: 0,
+    notes: "",
+  };
+}
+
 export function BudgetItemDialog({
   open,
   onOpenChange,
@@ -63,22 +79,10 @@ export function BudgetItemDialog({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema) });
+  } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: valuesFor(item) });
 
   useEffect(() => {
-    if (!open) return;
-    reset(
-      item
-        ? {
-            name: item.name,
-            category: item.category,
-            estimated: item.estimated,
-            actual: item.actual,
-            paid: item.paid,
-            notes: item.notes,
-          }
-        : { name: "", category: "venue", estimated: Number.NaN, actual: null, paid: 0, notes: "" },
-    );
+    if (open) reset(valuesFor(item));
   }, [open, item, reset]);
 
   const onSubmit = handleSubmit(async (values) => {

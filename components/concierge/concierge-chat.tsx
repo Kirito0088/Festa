@@ -26,6 +26,7 @@ function suggestionsFor(event: Doc<"events">): string[] {
     `Our budget has dropped from ${formatMoney(event.budget, event.currency)} to ${formatMoney(reduced, event.currency)}. Help me adjust the plan.`,
     `We're now expecting ${Math.max(10, Math.round(event.guestCount * 0.75))} guests instead of ${event.guestCount}.`,
     "What should I book first, and by when?",
+    "Suggest three decor ideas that suit our palette and guest count.",
     "Add the tasks we're missing for the final week.",
   ];
 }

@@ -57,6 +57,7 @@ function WarmSections({ eventId }: { eventId: string }) {
       activity: { query: api.activity.recent, args: { ...args, limit: RECENT_ACTIVITY_LIMIT } },
       moodboard: { query: api.moodboard.list, args },
       concierge: { query: api.concierge.list, args },
+      schedule: { query: api.schedule.list, args },
     };
   }, [eventId, isAuthenticated]);
   useQueries(queries);

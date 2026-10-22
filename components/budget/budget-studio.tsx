@@ -94,7 +94,7 @@ export function BudgetStudio() {
       <Panel>
         <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-3 lg:grid-cols-6">
           <Stat label="Total budget" value={fmt(summary.total)} />
-          <Stat label="Estimated" value={fmt(summary.estimated)} />
+          <Stat label="Estimated" value={fmt(summary.estimated)} detail="Planning estimates, not quotes" />
           <Stat label="Committed" value={fmt(summary.committed)} detail="Actual cost where known" />
           <Stat label="Paid" value={fmt(summary.paid)} />
           <Stat label="Still to pay" value={fmt(summary.outstanding)} />

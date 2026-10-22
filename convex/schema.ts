@@ -114,6 +114,17 @@ export default defineSchema({
     credit: v.optional(v.string()),
   }).index("by_eventId", ["eventId"]),
 
+  /** The run sheet for the day itself: one row per timed moment. */
+  scheduleItems: defineTable({
+    eventId: v.id("events"),
+    ownerId: v.id("users"),
+    /** 24-hour "HH:MM". */
+    time: v.string(),
+    title: v.string(),
+    notes: v.string(),
+    source: v.union(v.literal("plan"), v.literal("user"), v.literal("sample")),
+  }).index("by_eventId_and_time", ["eventId", "time"]),
+
   conciergeMessages: defineTable({
     eventId: v.id("events"),
     ownerId: v.id("users"),

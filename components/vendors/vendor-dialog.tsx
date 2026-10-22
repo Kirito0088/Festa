@@ -57,6 +57,22 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+function valuesFor(vendor: Doc<"vendors"> | null, defaultCategory: Values["category"] | undefined): Values {
+  return {
+    name: vendor?.name ?? "",
+    category: vendor?.category ?? defaultCategory ?? "venue",
+    contactName: vendor?.contactName ?? "",
+    phone: vendor?.phone ?? "",
+    email: vendor?.email ?? "",
+    website: vendor?.website ?? "",
+    quoteEstimated: vendor?.quoteEstimated ?? null,
+    quoteActual: vendor?.quoteActual ?? null,
+    status: vendor?.status ?? "researching",
+    paymentStatus: vendor?.paymentStatus ?? "unpaid",
+    notes: vendor?.notes ?? "",
+  };
+}
+
 export function VendorDialog({
   open,
   onOpenChange,
@@ -80,23 +96,10 @@ export function VendorDialog({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema) });
+  } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: valuesFor(vendor, defaultCategory) });
 
   useEffect(() => {
-    if (!open) return;
-    reset({
-      name: vendor?.name ?? "",
-      category: vendor?.category ?? defaultCategory ?? "venue",
-      contactName: vendor?.contactName ?? "",
-      phone: vendor?.phone ?? "",
-      email: vendor?.email ?? "",
-      website: vendor?.website ?? "",
-      quoteEstimated: vendor?.quoteEstimated ?? null,
-      quoteActual: vendor?.quoteActual ?? null,
-      status: vendor?.status ?? "researching",
-      paymentStatus: vendor?.paymentStatus ?? "unpaid",
-      notes: vendor?.notes ?? "",
-    });
+    if (open) reset(valuesFor(vendor, defaultCategory));
   }, [open, vendor, defaultCategory, reset]);
 
   const onSubmit = handleSubmit(async (values) => {

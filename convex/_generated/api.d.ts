@@ -23,6 +23,7 @@ import type * as lib_rateLimits from "../lib/rateLimits.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as moodboard from "../moodboard.js";
 import type * as plans from "../plans.js";
+import type * as schedule from "../schedule.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 import type * as vendors from "../vendors.js";
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   "lib/validators": typeof lib_validators;
   moodboard: typeof moodboard;
   plans: typeof plans;
+  schedule: typeof schedule;
   tasks: typeof tasks;
   users: typeof users;
   vendors: typeof vendors;

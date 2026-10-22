@@ -26,6 +26,11 @@ export async function deleteEventCascade(ctx: MutationCtx, eventId: Id<"events">
     .withIndex("by_eventId", (q) => q.eq("eventId", eventId))) {
     await ctx.db.delete("conciergeMessages", doc._id);
   }
+  for await (const doc of ctx.db
+    .query("scheduleItems")
+    .withIndex("by_eventId_and_time", (q) => q.eq("eventId", eventId))) {
+    await ctx.db.delete("scheduleItems", doc._id);
+  }
   for await (const doc of ctx.db.query("activity").withIndex("by_eventId", (q) => q.eq("eventId", eventId))) {
     await ctx.db.delete("activity", doc._id);
   }

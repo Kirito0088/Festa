@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "cn";
-import { CalendarPlus, GripVertical, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { BellPlus, GripVertical, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -166,6 +166,23 @@ export function TaskRow({
         </p>
       </div>
       <DeadlineChip due={task.due} state={task.state} today={today} className="hidden sm:inline-flex" />
+      {task.due && !task.completed && (
+        <Button asChild variant="ghost" size="icon-sm">
+          <a
+            href={googleCalendarUrl({
+              title: task.title,
+              date: task.due,
+              details: `Festa task for ${eventName}`,
+            })}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Remind me about ${task.title} in Google Calendar (opens in a new tab)`}
+            title="Remind me in Google Calendar"
+          >
+            <BellPlus aria-hidden="true" />
+          </a>
+        </Button>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${task.title}`}>
@@ -176,21 +193,6 @@ export function TaskRow({
           <DropdownMenuItem onSelect={onEdit}>
             <Pencil aria-hidden="true" /> Edit
           </DropdownMenuItem>
-          {task.due && (
-            <DropdownMenuItem asChild>
-              <a
-                href={googleCalendarUrl({
-                  title: task.title,
-                  date: task.due,
-                  details: `Festa task for ${eventName}`,
-                })}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <CalendarPlus aria-hidden="true" /> Add to Google Calendar
-              </a>
-            </DropdownMenuItem>
-          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onSelect={onDelete}>
             <Trash2 aria-hidden="true" /> Delete

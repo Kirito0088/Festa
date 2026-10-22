@@ -4,6 +4,7 @@ import { describeFailure, estimateTokens, requestStructured } from "../lib/ai/gr
 import { toStrictJsonSchema } from "../lib/ai/json-schema";
 import { blueprintMessages } from "../lib/ai/prompts";
 import { materializePlan } from "../lib/plan/materialize";
+import { daySchedule } from "../lib/plan/run-sheet";
 import { templateBlueprint } from "../lib/plan/template";
 import { internal } from "./_generated/api";
 import { env, internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
@@ -236,6 +237,9 @@ export const saveBlueprint = internalMutation({
           order: (index + 1) * 1000,
           source: "plan",
         });
+      }
+      for (const entry of daySchedule(event)) {
+        await ctx.db.insert("scheduleItems", { eventId: event._id, ownerId: event.ownerId, ...entry, source: "plan" });
       }
       applied = true;
     }
