@@ -9,6 +9,16 @@ export const DEFAULT_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"] as c
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
+/**
+ * A rough token count for rate limiting: about four characters per prompt
+ * token, plus half the completion cap, since replies rarely use all of it.
+ * Groq's own 429 still backstops any underestimate.
+ */
+export function estimateTokens(messages: readonly ChatMessage[], maxCompletionTokens: number): number {
+  const characters = messages.reduce((sum, message) => sum + message.content.length, 0);
+  return Math.ceil(characters / 4) + Math.ceil(maxCompletionTokens / 2);
+}
+
 export type GroqFailureKind =
   "missing_key" | "unauthorized" | "rate_limited" | "timeout" | "network" | "http" | "invalid_output";
 

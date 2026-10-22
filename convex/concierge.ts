@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { summarizeBudget } from "../lib/budget";
 import { LIMITS } from "../lib/constants";
 import { clampOffsetDays, daysBetween, resolveDueDate } from "../lib/dates";
-import { requestStructured, type GroqFailure } from "../lib/ai/groq";
+import { estimateTokens, requestStructured, type GroqFailure } from "../lib/ai/groq";
 import { toStrictJsonSchema } from "../lib/ai/json-schema";
 import { conciergeMessages } from "../lib/ai/prompts";
 import { fallbackConcierge } from "../lib/concierge/fallback";
@@ -25,12 +25,14 @@ import {
   type MutationCtx,
 } from "./_generated/server";
 import { logActivity, requireOwnedDoc, requireOwnedEvent, touchEvent } from "./lib/access";
+import { limitWrites } from "./lib/rateLimits";
 import { groqModels, toPlanInput } from "./lib/plan";
 import { cleanGuestCount, cleanLongText, cleanMoney, invalid, resolveToday } from "./lib/input";
 import { vPlanInput, vProposedChange } from "./lib/validators";
 import schema from "./schema";
 
 const CONCIERGE_JSON_SCHEMA = toStrictJsonSchema(conciergeResponseSchema);
+const CONCIERGE_MAX_TOKENS = 2500;
 
 export const list = query({
   args: { eventId: v.id("events") },
@@ -50,7 +52,8 @@ export const send = mutation({
   args: { eventId: v.id("events"), content: v.string(), today: v.optional(v.string()) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { event } = await requireOwnedEvent(ctx, args.eventId);
+    const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
+    await limitWrites(ctx, userId);
     const content = cleanLongText(args.content, "Message", LIMITS.chatMessageMax);
     if (!content) throw invalid("Write a message first.");
 
@@ -206,8 +209,10 @@ function proposalOutcome(proposal: Doc<"conciergeMessages">["proposal"]): string
   return "\n[Proposal not yet approved. Nothing has changed.]";
 }
 
-function offlineNotice(failure: GroqFailure | "quota"): string {
+function offlineNotice(failure: GroqFailure | "quota" | "busy"): string {
   if (failure === "quota") return "You've reached the hourly AI limit, so the offline assistant answered.";
+  if (failure === "busy")
+    return "The free AI allowance is busy right now, so the offline assistant answered. Try again in a minute.";
   switch (failure.kind) {
     case "missing_key":
       return "AI isn't configured on this deployment, so the offline assistant answered.";
@@ -246,51 +251,54 @@ export const respond = internalAction({
       let proposal: Proposal | null = null;
       let notice: string | undefined;
 
-      const allowed = await ctx.runMutation(internal.plans.consumeAiQuota, {
+      const snapshot = {
+        event: { ...data.event, today: args.today, daysToGo: daysBetween(args.today, data.event.date) },
+        budget: summarizeBudget(data.event.budget, data.budgetItems),
+        budgetItems: data.budgetItems,
+        tasks: data.tasks.map((task) => ({
+          id: task.id,
+          title: task.title,
+          category: task.category,
+          priority: task.priority,
+          due: resolveDueDate(
+            {
+              dueMode: task.dueMode as Doc<"tasks">["dueMode"],
+              offsetDays: task.offsetDays ?? undefined,
+              dueDate: task.dueDate ?? undefined,
+            },
+            data.event.date,
+          ),
+          completed: task.completed,
+        })),
+        vendors: data.vendors,
+      };
+      const messages = conciergeMessages(snapshot, data.history, data.userMessage);
+      const quota = await ctx.runMutation(internal.plans.consumeAiQuota, {
         userId: data.ownerId,
         kind: "concierge",
+        tokens: estimateTokens(messages, CONCIERGE_MAX_TOKENS),
       });
-      if (allowed) {
-        const snapshot = {
-          event: { ...data.event, today: args.today, daysToGo: daysBetween(args.today, data.event.date) },
-          budget: summarizeBudget(data.event.budget, data.budgetItems),
-          budgetItems: data.budgetItems,
-          tasks: data.tasks.map((task) => ({
-            id: task.id,
-            title: task.title,
-            category: task.category,
-            priority: task.priority,
-            due: resolveDueDate(
-              {
-                dueMode: task.dueMode as Doc<"tasks">["dueMode"],
-                offsetDays: task.offsetDays ?? undefined,
-                dueDate: task.dueDate ?? undefined,
-              },
-              data.event.date,
-            ),
-            completed: task.completed,
-          })),
-          vendors: data.vendors,
-        };
+      if (quota === "ok") {
         const result = await requestStructured({
           apiKey: env.GROQ_API_KEY,
           models: groqModels(),
-          messages: conciergeMessages(snapshot, data.history, data.userMessage),
+          messages,
           schemaName: "concierge_reply",
           jsonSchema: CONCIERGE_JSON_SCHEMA,
           parse: parseConciergeResponse,
-          maxCompletionTokens: 2500,
+          maxCompletionTokens: CONCIERGE_MAX_TOKENS,
           temperature: 0.4,
         });
         if (result.ok) {
           reply = result.data.reply;
           proposal = normalizeProposal(result.data.proposal, ids);
         } else {
+          if (result.failure.kind === "rate_limited") await ctx.runMutation(internal.plans.pauseAi, {});
           notice = offlineNotice(result.failure);
           console.warn(`Concierge fell back to offline mode: ${result.failure.kind}`);
         }
       } else {
-        notice = offlineNotice("quota");
+        notice = offlineNotice(quota === "user_limit" ? "quota" : "busy");
       }
 
       const engine = reply === null ? "offline" : "ai";

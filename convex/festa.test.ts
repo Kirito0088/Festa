@@ -3,7 +3,7 @@ import rateLimiter from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sumMoney } from "../lib/money";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
@@ -342,5 +342,70 @@ describe("cascading delete", () => {
       activity: await ctx.db.query("activity").collect(),
     }));
     expect(leftovers).toEqual({ items: [], tasks: [], blueprints: [], activity: [] });
+  });
+});
+
+describe("rate limits", () => {
+  it("stops one user's AI plans at their own allowance", async () => {
+    const t = setup();
+    const { userId } = await createUser(t);
+    const quota = (tokens: number) =>
+      t.mutation(internal.plans.consumeAiQuota, { userId, kind: "plan", tokens });
+    // The plan bucket holds three requests.
+    expect([await quota(100), await quota(100), await quota(100)]).toEqual(["ok", "ok", "ok"]);
+    expect(await quota(100)).toBe("user_limit");
+  });
+
+  it("refuses when the shared per-minute token budget is spent, without charging the user", async () => {
+    const t = setup();
+    const first = await createUser(t);
+    const second = await createUser(t);
+    expect(
+      await t.mutation(internal.plans.consumeAiQuota, { userId: first.userId, kind: "plan", tokens: 6000 }),
+    ).toBe("ok");
+    const busy = await t.mutation(internal.plans.consumeAiQuota, {
+      userId: second.userId,
+      kind: "plan",
+      tokens: 6000,
+    });
+    expect(busy).toBe("busy");
+    // The refusal cost the second user nothing: three small plans still fit their bucket.
+    vi.advanceTimersByTime(60_000);
+    for (let i = 0; i < 3; i++) {
+      expect(
+        await t.mutation(internal.plans.consumeAiQuota, { userId: second.userId, kind: "plan", tokens: 100 }),
+      ).toBe("ok");
+    }
+  });
+
+  it("pauses every AI call for about a minute after Groq refuses", async () => {
+    const t = setup();
+    const { userId } = await createUser(t);
+    await t.mutation(internal.plans.pauseAi, {});
+    expect(await t.mutation(internal.plans.consumeAiQuota, { userId, kind: "concierge", tokens: 500 })).toBe(
+      "busy",
+    );
+    vi.advanceTimersByTime(2 * 60_000);
+    expect(await t.mutation(internal.plans.consumeAiQuota, { userId, kind: "concierge", tokens: 500 })).toBe(
+      "ok",
+    );
+  });
+
+  it("slows down a user who creates records too quickly", async () => {
+    const t = setup();
+    const user = await createUser(t);
+    const eventId = await createEvent(user, t);
+    const task = (title: string) =>
+      user.as.mutation(api.tasks.create, {
+        eventId,
+        title,
+        notes: "",
+        category: "logistics",
+        priority: "low",
+        dueMode: "none",
+      });
+    // The event creation and its template used none of this allowance; the bucket holds 60.
+    for (let i = 0; i < 60; i++) await task(`Task ${i}`);
+    await expect(task("One too many")).rejects.toThrow(/very quickly/);
   });
 });

@@ -3,6 +3,7 @@ import { LIMITS } from "../lib/constants";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { logActivity, requireOwnedDoc, requireOwnedEvent, touchEvent } from "./lib/access";
+import { limitWrites } from "./lib/rateLimits";
 import { cleanLongText, cleanOptionalMoney, cleanText, invalid } from "./lib/input";
 import { vCategory, vPaymentStatus, vVendorStatus } from "./lib/validators";
 import schema from "./schema";
@@ -67,7 +68,8 @@ export const create = mutation({
   args: { eventId: v.id("events"), ...vendorFields },
   returns: v.id("vendors"),
   handler: async (ctx, args) => {
-    const { event } = await requireOwnedEvent(ctx, args.eventId);
+    const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
+    await limitWrites(ctx, userId);
     const name = cleanText(args.name, "Vendor name", LIMITS.nameMax, true);
     const id = await ctx.db.insert("vendors", {
       eventId: event._id,

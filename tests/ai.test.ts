@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BlueprintValidationError, blueprintSchema, parseBlueprint, type Blueprint } from "@/lib/ai/blueprint";
-import { requestStructured, describeFailure } from "@/lib/ai/groq";
+import { estimateTokens, requestStructured, describeFailure } from "@/lib/ai/groq";
 import { toStrictJsonSchema } from "@/lib/ai/json-schema";
 import { blueprintMessages } from "@/lib/ai/prompts";
 import { templateBlueprint, type PlanInput } from "@/lib/plan/template";
@@ -183,5 +183,20 @@ describe("requestStructured", () => {
     const result = await requestStructured({ ...baseRequest, fetchImpl });
     expect(result).toMatchObject({ ok: false, failure: { kind: "network" } });
     expect(fetchImpl).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("estimateTokens", () => {
+  it("counts about four characters per prompt token plus half the completion cap", () => {
+    const messages = [
+      { role: "system" as const, content: "a".repeat(400) },
+      { role: "user" as const, content: "b".repeat(398) },
+    ];
+    expect(estimateTokens(messages, 5000)).toBe(200 + 2500);
+  });
+
+  it("keeps a real blueprint request inside one minute of the shared token budget", () => {
+    const notes = "n".repeat(2000); // the longest notes field the form allows
+    expect(estimateTokens(blueprintMessages({ ...input, notes }, "2026-10-20"), 5000)).toBeLessThan(7000);
   });
 });

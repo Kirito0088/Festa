@@ -128,6 +128,14 @@ export const start = mutation({
         message: "Please wait a little before reseeding the demo.",
       });
     }
+    // Each anonymous session has fresh per-user buckets, so demos also share one.
+    const global = await rateLimiter.limit(ctx, "demoSeedGlobal");
+    if (!global.ok) {
+      throw new ConvexError({
+        code: "RATE_LIMITED",
+        message: "A lot of people are trying the demo right now. Please try again in a few minutes.",
+      });
+    }
 
     const today = resolveToday(args.today);
     const input: PlanInput = {

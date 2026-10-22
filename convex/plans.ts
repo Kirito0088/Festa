@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { blueprintSchema, parseBlueprint, type Blueprint } from "../lib/ai/blueprint";
-import { describeFailure, requestStructured } from "../lib/ai/groq";
+import { describeFailure, estimateTokens, requestStructured } from "../lib/ai/groq";
 import { toStrictJsonSchema } from "../lib/ai/json-schema";
 import { blueprintMessages } from "../lib/ai/prompts";
 import { materializePlan } from "../lib/plan/materialize";
@@ -10,10 +10,11 @@ import { env, internalAction, internalMutation, internalQuery, mutation } from "
 import { logActivity, requireOwnedEvent } from "./lib/access";
 import { resolveToday } from "./lib/input";
 import { groqModels, toPlanInput } from "./lib/plan";
-import { rateLimiter } from "./lib/rateLimits";
+import { AI_TOKENS_PER_MINUTE, rateLimiter } from "./lib/rateLimits";
 import { vBlueprintContent, vPlanInput } from "./lib/validators";
 
 const BLUEPRINT_JSON_SCHEMA = toStrictJsonSchema(blueprintSchema);
+const BLUEPRINT_MAX_TOKENS = 5000;
 
 /** Starts a fresh blueprint. Existing budget lines and tasks are never replaced. */
 export const regenerate = mutation({
@@ -45,19 +46,50 @@ export const getEvent = internalQuery({
   },
 });
 
-/** Consumes per-user and global AI quota. Returns false when exhausted. */
+/**
+ * Reserves quota for one Groq call: the user's own allowance, then the
+ * shared request and token budgets that keep Festa under Groq's free tier.
+ * Everything is checked before anything is consumed, so a refusal costs
+ * nothing. `tokens` is the caller's estimate (see `estimateTokens`).
+ */
 export const consumeAiQuota = internalMutation({
-  args: { userId: v.id("users"), kind: v.union(v.literal("plan"), v.literal("concierge")) },
-  returns: v.boolean(),
+  args: {
+    userId: v.id("users"),
+    kind: v.union(v.literal("plan"), v.literal("concierge")),
+    tokens: v.number(),
+  },
+  returns: v.union(v.literal("ok"), v.literal("user_limit"), v.literal("busy")),
   handler: async (ctx, args) => {
-    const perUser = await rateLimiter.limit(
-      ctx,
-      args.kind === "plan" ? "aiPlanPerUser" : "aiConciergePerUser",
-      { key: args.userId },
-    );
-    if (!perUser.ok) return false;
-    const global = await rateLimiter.limit(ctx, "aiGlobal");
-    return global.ok;
+    const perUser = args.kind === "plan" ? "aiPlanPerUser" : "aiConciergePerUser";
+    const tokens = Math.min(AI_TOKENS_PER_MINUTE, Math.max(1, Math.ceil(args.tokens)));
+    const shared = [
+      { name: "aiGlobal", count: 1 },
+      { name: "aiRequestsPerDay", count: 1 },
+      { name: "aiTokensPerMinute", count: tokens },
+      { name: "aiTokensPerDay", count: tokens },
+    ] as const;
+
+    if (!(await rateLimiter.check(ctx, perUser, { key: args.userId })).ok) return "user_limit";
+    for (const { name, count } of shared) {
+      if (!(await rateLimiter.check(ctx, name, { count })).ok) return "busy";
+    }
+    await rateLimiter.limit(ctx, perUser, { key: args.userId });
+    for (const { name, count } of shared) await rateLimiter.limit(ctx, name, { count });
+    return "ok";
+  },
+});
+
+/**
+ * Called after Groq answers 429: spends a full minute of the shared token
+ * budget in advance, so every user goes straight to the built-in planner
+ * instead of each waiting on a refusal.
+ */
+export const pauseAi = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    await rateLimiter.limit(ctx, "aiTokensPerMinute", { count: AI_TOKENS_PER_MINUTE, reserve: true });
+    return null;
   },
 });
 
@@ -81,28 +113,34 @@ export const generate = internalAction({
 
     try {
       if (args.useAI) {
-        const allowed = await ctx.runMutation(internal.plans.consumeAiQuota, {
+        const messages = blueprintMessages(input, args.today);
+        const quota = await ctx.runMutation(internal.plans.consumeAiQuota, {
           userId: snapshot.ownerId,
           kind: "plan",
+          tokens: estimateTokens(messages, BLUEPRINT_MAX_TOKENS),
         });
-        if (!allowed) {
+        if (quota === "user_limit") {
           notice =
             "You've reached the hourly limit for AI plans, so Festa used its built-in planner. Try regenerating with AI later.";
+        } else if (quota === "busy") {
+          notice =
+            "Festa's free AI allowance is busy right now, so it used its built-in planner. Try regenerating with AI in a minute.";
         } else {
           const result = await requestStructured({
             apiKey: env.GROQ_API_KEY,
             models: groqModels(),
-            messages: blueprintMessages(input, args.today),
+            messages,
             schemaName: "celebration_blueprint",
             jsonSchema: BLUEPRINT_JSON_SCHEMA,
             parse: parseBlueprint,
-            maxCompletionTokens: 5000,
+            maxCompletionTokens: BLUEPRINT_MAX_TOKENS,
           });
           if (result.ok) {
             blueprint = result.data;
             source = "ai";
             model = result.model;
           } else {
+            if (result.failure.kind === "rate_limited") await ctx.runMutation(internal.plans.pauseAi, {});
             notice = describeFailure(result.failure);
             console.warn(
               `AI blueprint fell back to template: ${result.failure.kind} (${result.failure.message})`,

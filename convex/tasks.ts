@@ -3,6 +3,7 @@ import { LIMITS } from "../lib/constants";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { logActivity, requireOwnedDoc, requireOwnedEvent, touchEvent } from "./lib/access";
+import { limitWrites } from "./lib/rateLimits";
 import { cleanDate, cleanLongText, cleanOffsetDays, cleanText, invalid } from "./lib/input";
 import { vCategory, vDueMode, vPriority } from "./lib/validators";
 import schema from "./schema";
@@ -46,7 +47,8 @@ export const create = mutation({
   },
   returns: v.id("tasks"),
   handler: async (ctx, args) => {
-    const { event } = await requireOwnedEvent(ctx, args.eventId);
+    const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
+    await limitWrites(ctx, userId);
     const title = cleanText(args.title, "Title", LIMITS.nameMax, true);
     const last = await ctx.db
       .query("tasks")
