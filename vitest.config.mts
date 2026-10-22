@@ -8,6 +8,12 @@ export default defineConfig({
     alias: { "@": root },
   },
   test: {
+    coverage: {
+      provider: "v8",
+      include: ["lib/**/*.ts", "convex/**/*.ts", "components/**/*-schema.ts"],
+      exclude: ["convex/_generated/**", "**/*.test.ts", "**/*.config.ts"],
+      reporter: ["text-summary", "html"],
+    },
     projects: [
       {
         extends: true,

@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "convex/_generated/**",
     // Playwright MCP output and QA scripts (gitignored).
     ".playwright-mcp/**",
+    // Test coverage reports.
+    "coverage/**",
   ]),
 ]);
 

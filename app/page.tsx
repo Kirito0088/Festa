@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { CompactActions, HeaderActions, HeroActions } from "@/components/marketing/landing-actions";
@@ -5,6 +6,8 @@ import { Story } from "@/components/marketing/story";
 import { Bunting } from "@/components/ui/bunting";
 import { FestaLogo } from "@/components/ui/festa-logo";
 import { HERO_IMAGES, unsplashUrl } from "@/lib/inspiration";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const PALETTE = ["#E9A238", "#C2452D", "#5E7458", "#B08D57", "#E9C7C3"];
 

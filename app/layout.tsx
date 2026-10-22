@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Instrument_Serif } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,13 +17,25 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Festa — Make room for moments",
+    default: `${SITE_NAME}: ${SITE_TAGLINE}`,
     template: "%s · Festa",
   },
-  description:
-    "Festa is an AI-powered celebration planner for weddings, birthdays, engagements and community events: a guided plan, budget, timeline, vendors, inspiration and a concierge in one place.",
-  applicationName: "Festa",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME}: ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME}: ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {
