@@ -157,6 +157,9 @@ export const VENUE_OPTIONS = [
   "Community hall",
 ] as const;
 
+/** Activity entries on the overview; the event chrome preloads the same query. */
+export const RECENT_ACTIVITY_LIMIT = 8;
+
 /** Limits applied to user input and AI output alike. */
 export const LIMITS = {
   nameMax: 120,

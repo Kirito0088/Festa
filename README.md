@@ -40,7 +40,9 @@ Optional: `GROQ_MODEL`, `GROQ_FALLBACK_MODEL` to override models. Secrets live o
 
 ## Scripts
 
-`npm run check` (typecheck + lint + tests) · `npm test` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build`
+`npm run check` (typecheck + lint + tests) · `npm test` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run preview` (production build on http://localhost:3000)
+
+`npm run dev` compiles each route on first visit and runs React in development mode, so it is several times slower than the deployed app. Judge speed with `npm run preview`.
 
 ## Architecture notes
 

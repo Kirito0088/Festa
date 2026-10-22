@@ -1,13 +1,15 @@
 "use client";
 
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth, useQueries, useQuery } from "convex/react";
 import { SearchX } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RECENT_ACTIVITY_LIMIT } from "@/lib/constants";
 import { EventProvider } from "./event-context";
 import { EventHeader } from "./event-header";
 import { EventNav } from "./event-nav";
@@ -20,15 +22,57 @@ import { EventNav } from "./event-nav";
 export function EventChrome({ eventId }: { eventId: string }) {
   const data = useEvent(eventId);
 
-  if (data === undefined) return <ChromeSkeleton />;
-  if (data === null) return null;
-
   return (
-    <EventProvider value={data}>
-      <EventHeader />
-      <EventNav eventId={data.event._id} />
-    </EventProvider>
+    <>
+      <WarmSections eventId={eventId} />
+      {data === undefined ? (
+        <ChromeSkeleton />
+      ) : data === null ? null : (
+        <EventProvider value={data}>
+          <EventHeader />
+          <EventNav eventId={data.event._id} />
+        </EventProvider>
+      )}
+    </>
   );
+}
+
+/**
+ * Subscribes to every section's data as soon as the event route opens, in
+ * parallel with the event itself. A section's `useQuery` with the same args
+ * then returns the cached result on mount, so switching tabs never waits on
+ * the network. Kept in its own component so live updates don't re-render the
+ * chrome. Errors (a bad id, someone else's event) come back as values and are
+ * ignored; EventGate shows the not-found state.
+ */
+function WarmSections({ eventId }: { eventId: string }) {
+  const { isAuthenticated } = useConvexAuth();
+  const queries = useMemo((): Parameters<typeof useQueries>[0] => {
+    if (!isAuthenticated) return {};
+    const args = { eventId: eventId as Id<"events"> };
+    return {
+      budget: { query: api.budget.list, args },
+      tasks: { query: api.tasks.list, args },
+      vendors: { query: api.vendors.list, args },
+      activity: { query: api.activity.recent, args: { ...args, limit: RECENT_ACTIVITY_LIMIT } },
+      moodboard: { query: api.moodboard.list, args },
+      concierge: { query: api.concierge.list, args },
+    };
+  }, [eventId, isAuthenticated]);
+  useQueries(queries);
+
+  // Fetch the lazily loaded settings form once the page is idle.
+  useEffect(() => {
+    const preload = () => void import("./event-settings-dialog");
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(preload, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(preload, 1500);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  return null;
 }
 
 /**

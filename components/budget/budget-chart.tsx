@@ -1,5 +1,6 @@
 "use client";
 
+import { useDeferredValue } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { CategorySummary } from "@/lib/budget";
 import { CATEGORY_LABELS, type Category } from "@/lib/constants";
@@ -59,65 +60,71 @@ export function BudgetChart({ categories, currency }: { categories: CategorySumm
     committed: category.committed,
     variance: category.variance,
   }));
+  // Laying out the chart is one long task on slower phones. Paint the studio
+  // first, then draw the chart in an interruptible background render; the
+  // sized box below keeps the layout still meanwhile.
+  const drawChart = useDeferredValue(true, false);
 
   return (
     <figure aria-label="Estimated versus committed spending by category">
       <div style={{ height: Math.max(220, rows.length * 46 + 60) }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={rows}
-            layout="vertical"
-            margin={{ top: 4, right: 12, bottom: 4, left: 4 }}
-            barGap={2}
-          >
-            <CartesianGrid horizontal={false} stroke="#ece7dd" />
-            <XAxis
-              type="number"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-              tickFormatter={(value: number) => formatMoney(value, currency, { compact: true })}
-            />
-            <YAxis
-              type="category"
-              dataKey="label"
-              width={132}
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "var(--foreground)", fontSize: 12 }}
-            />
-            <Tooltip
-              cursor={{ fill: "rgb(32 33 31 / 0.04)" }}
-              content={<ChartTooltip currency={currency} />}
-            />
-            <Legend
-              verticalAlign="top"
-              align="right"
-              height={32}
-              iconType="circle"
-              iconSize={8}
-              // Match the bar order (estimated, then committed) rather than sorting by label.
-              itemSorter={(item) => (item.dataKey === "estimated" ? 0 : 1)}
-              formatter={(value: string) => (
-                <span className="text-[0.75rem] text-muted-foreground">{value}</span>
-              )}
-            />
-            <Bar
-              dataKey="estimated"
-              name={SERIES.estimated.label}
-              fill={SERIES.estimated.color}
-              barSize={9}
-              radius={[0, 4, 4, 0]}
-            />
-            <Bar
-              dataKey="committed"
-              name={SERIES.committed.label}
-              fill={SERIES.committed.color}
-              barSize={9}
-              radius={[0, 4, 4, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        {drawChart && (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={rows}
+              layout="vertical"
+              margin={{ top: 4, right: 12, bottom: 4, left: 4 }}
+              barGap={2}
+            >
+              <CartesianGrid horizontal={false} stroke="#ece7dd" />
+              <XAxis
+                type="number"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                tickFormatter={(value: number) => formatMoney(value, currency, { compact: true })}
+              />
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={132}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "var(--foreground)", fontSize: 12 }}
+              />
+              <Tooltip
+                cursor={{ fill: "rgb(32 33 31 / 0.04)" }}
+                content={<ChartTooltip currency={currency} />}
+              />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                height={32}
+                iconType="circle"
+                iconSize={8}
+                // Match the bar order (estimated, then committed) rather than sorting by label.
+                itemSorter={(item) => (item.dataKey === "estimated" ? 0 : 1)}
+                formatter={(value: string) => (
+                  <span className="text-[0.75rem] text-muted-foreground">{value}</span>
+                )}
+              />
+              <Bar
+                dataKey="estimated"
+                name={SERIES.estimated.label}
+                fill={SERIES.estimated.color}
+                barSize={9}
+                radius={[0, 4, 4, 0]}
+              />
+              <Bar
+                dataKey="committed"
+                name={SERIES.committed.label}
+                fill={SERIES.committed.color}
+                barSize={9}
+                radius={[0, 4, 4, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
       <figcaption className="sr-only">
         {rows

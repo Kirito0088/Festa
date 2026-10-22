@@ -15,7 +15,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,11 @@ import { countdownTo, formatIsoDate } from "@/lib/dates";
 import { errorMessage } from "@/lib/errors";
 import { googleCalendarUrl, googleMapsSearchUrl } from "@/lib/google";
 import { useEventContext } from "./event-context";
-import { EventSettingsDialog } from "./event-settings-dialog";
+
+const loadSettingsDialog = () => import("./event-settings-dialog");
+const EventSettingsDialog = lazy(() =>
+  loadSettingsDialog().then((module) => ({ default: module.EventSettingsDialog })),
+);
 
 export function EventHeader() {
   const { event } = useEventContext();
@@ -43,6 +47,9 @@ export function EventHeader() {
   const removeEvent = useMutation(api.events.remove);
   const regenerate = useMutation(api.plans.regenerate);
   const [editing, setEditing] = useState(false);
+  // The form (with zod and react-hook-form) loads on first open, then stays
+  // mounted so its close animation can play.
+  const [editedOnce, setEditedOnce] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const countdown = today ? countdownTo(event.date, today) : null;
@@ -87,7 +94,15 @@ export function EventHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setEditing(true)}>
+          <Button
+            variant="outline"
+            onPointerEnter={loadSettingsDialog}
+            onFocus={loadSettingsDialog}
+            onClick={() => {
+              setEditedOnce(true);
+              setEditing(true);
+            }}
+          >
             <Pencil aria-hidden="true" /> Edit details
           </Button>
           <DropdownMenu>
@@ -177,7 +192,11 @@ export function EventHeader() {
         )}
       </AnimatePresence>
 
-      <EventSettingsDialog open={editing} onOpenChange={setEditing} />
+      {editedOnce && (
+        <Suspense fallback={null}>
+          <EventSettingsDialog open={editing} onOpenChange={setEditing} />
+        </Suspense>
+      )}
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}

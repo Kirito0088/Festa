@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Stat } from "@/components/ui/stat";
 import { useToday } from "@/hooks/use-today";
 import { summarizeBudget } from "@/lib/budget";
-import { VENDOR_STATUSES, VENDOR_STATUS_LABELS } from "@/lib/constants";
+import { RECENT_ACTIVITY_LIMIT, VENDOR_STATUSES, VENDOR_STATUS_LABELS } from "@/lib/constants";
 import { countdownTo, formatIsoDate } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { resolveTasks, upcomingTasks } from "@/lib/tasks";
@@ -56,7 +56,7 @@ export function Overview() {
   const items = useQuery(api.budget.list, { eventId: event._id });
   const tasks = useQuery(api.tasks.list, { eventId: event._id });
   const vendors = useQuery(api.vendors.list, { eventId: event._id });
-  const activity = useQuery(api.activity.recent, { eventId: event._id, limit: 8 });
+  const activity = useQuery(api.activity.recent, { eventId: event._id, limit: RECENT_ACTIVITY_LIMIT });
 
   const budget = useMemo(() => (items ? summarizeBudget(event.budget, items) : null), [items, event.budget]);
   const resolved = useMemo(
