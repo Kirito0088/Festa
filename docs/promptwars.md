@@ -36,7 +36,7 @@ _(observed — consistent across several Challenge 3–5 repos)_
 
 | Rule                                                                               | Festa status                                                  |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Public GitHub repository                                                           | to do at publish time                                         |
+| Public GitHub repository                                                           | done: https://github.com/Kirito0088/Festa                     |
 | Single branch only (`main`)                                                        | keep the repo on `main`                                       |
 | Repository size under 10 MB (some cite 1 MB)                                       | no binaries or images committed; images load from remote URLs |
 | Comprehensive README covering the chosen vertical, approach, logic and assumptions | `README.md`                                                   |
