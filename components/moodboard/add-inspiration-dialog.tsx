@@ -3,7 +3,7 @@
 import { cn } from "cn";
 import { useMutation } from "convex/react";
 import { Check, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field } from "@/components/ui/field";
+import { Field, fieldAria } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SafeImage } from "@/components/ui/safe-image";
 import { Segmented } from "@/components/ui/segmented";
@@ -76,6 +76,7 @@ function AddInspirationForm({
   const library = useMemo(() => CURATED_IMAGES.filter((image) => image.category === category), [category]);
   const selected = CURATED_IMAGES.find((image) => image.id === selectedId) ?? null;
   const urlValid = isSafeImageUrl(url.trim());
+  const urlError = url.trim() && !urlValid ? "Use a direct image link that starts with https://" : undefined;
 
   const canSubmit =
     !busy &&
@@ -206,21 +207,24 @@ function AddInspirationForm({
         )}
 
         {mode === "link" && (
-          <Field
-            id="inspiration-url"
-            label="Image link"
-            error={url.trim() && !urlValid ? "Use a direct image link that starts with https://" : undefined}
-            hint="Use images you have permission to use."
-          >
-            <Input
+          <div className="grid gap-3">
+            <Field
               id="inspiration-url"
-              type="url"
-              inputMode="url"
-              placeholder="https://"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-            />
-          </Field>
+              label="Image link"
+              error={urlError}
+              hint="Use images you have permission to use."
+            >
+              <Input
+                {...fieldAria("inspiration-url", urlError, true)}
+                type="url"
+                inputMode="url"
+                placeholder="https://"
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+              />
+            </Field>
+            <LinkPreview url={urlValid ? url.trim() : ""} alt={title.trim()} />
+          </div>
         )}
 
         {mode === "colour" && (
@@ -276,5 +280,62 @@ function AddInspirationForm({
         </DialogFooter>
       </form>
     </>
+  );
+}
+
+const PREVIEW_DELAY_MS = 400;
+
+/**
+ * Shows the linked image before it's saved, so a broken link is caught here
+ * instead of as "Image unavailable" on the board. The box keeps its size in
+ * every state, so the form never jumps.
+ */
+function LinkPreview({ url, alt }: { url: string; alt: string }) {
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [result, setResult] = useState<{ src: string; ok: boolean } | null>(null);
+
+  // Wait for typing to pause so every keystroke doesn't fetch a new image.
+  useEffect(() => {
+    const id = window.setTimeout(() => setPreviewUrl(url), url ? PREVIEW_DELAY_MS : 0);
+    return () => window.clearTimeout(id);
+  }, [url]);
+
+  const status = !previewUrl
+    ? "empty"
+    : result?.src !== previewUrl
+      ? "loading"
+      : result.ok
+        ? "loaded"
+        : "failed";
+
+  return (
+    <div className="relative h-44 overflow-hidden rounded-2xl border border-border bg-sand-soft">
+      {status === "loading" && (
+        <Loader2
+          className="absolute inset-0 m-auto size-5 animate-spin text-sand-strong"
+          aria-hidden="true"
+        />
+      )}
+      {previewUrl ? (
+        <SafeImage
+          key={previewUrl}
+          src={previewUrl}
+          alt={alt ? `Preview of ${alt}` : "Preview of the linked image"}
+          fallbackLabel="This link didn't load as an image. Check that it opens the picture itself, not a page around it."
+          onLoad={() => setResult({ src: previewUrl, ok: true })}
+          onError={() => setResult({ src: previewUrl, ok: false })}
+          className="relative size-full"
+        />
+      ) : (
+        <p className="grid size-full place-items-center px-6 text-center text-[0.8125rem] text-muted-foreground">
+          A preview appears here once the link looks right.
+        </p>
+      )}
+      <p aria-live="polite" className="sr-only">
+        {status === "loading" && "Loading the preview."}
+        {status === "loaded" && "Preview loaded."}
+        {status === "failed" && "This link didn't load as an image."}
+      </p>
+    </div>
   );
 }

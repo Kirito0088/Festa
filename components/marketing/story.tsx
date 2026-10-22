@@ -444,7 +444,7 @@ function Details({ p }: { p: MotionValue<number> }) {
       </div>
       <div className="surface relative min-w-0 p-4">
         <p className="text-[0.8125rem] font-medium">Checklist</p>
-        <ul className="mt-3 grid gap-2.5">
+        <ul className="@container mt-3 grid gap-2.5">
           {TASKS.map(([task, due], index) => (
             <TaskTick key={task} index={index} p={p} task={task} due={due} />
           ))}
@@ -513,8 +513,8 @@ function TaskTick({
   const draw = useTransform(p, [start + 0.005, start + 0.02], [0, 1]);
   const opacity = useTransform(p, [start - 0.02, start], [0.35, 1]);
   return (
-    <motion.li style={{ opacity }} className="flex items-center gap-2 text-[0.75rem]">
-      <span className="relative grid size-4 shrink-0 place-items-center rounded-full border-[1.5px] border-input">
+    <motion.li style={{ opacity }} className="flex items-start gap-2 text-[0.75rem]">
+      <span className="relative mt-px grid size-4 shrink-0 place-items-center rounded-full border-[1.5px] border-input">
         <motion.span
           style={{ opacity: fill }}
           className="absolute -inset-[1.5px] rounded-full bg-sage-strong"
@@ -531,8 +531,11 @@ function TaskTick({
           />
         </svg>
       </span>
-      <span className="min-w-0 flex-1 truncate">{task}</span>
-      <span className="shrink-0 text-muted-foreground">{due}</span>
+      {/* On a narrow stage every date drops under its name instead of cutting names short. */}
+      <span className="flex min-w-0 flex-1 flex-col @min-[8.5rem]:flex-row @min-[8.5rem]:justify-between @min-[8.5rem]:gap-2">
+        <span className="truncate">{task}</span>
+        <span className="shrink-0 text-muted-foreground">{due}</span>
+      </span>
     </motion.li>
   );
 }

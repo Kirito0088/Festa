@@ -14,11 +14,15 @@ export function SafeImage({
   alt,
   className,
   fallbackLabel = "Image unavailable",
+  onLoad,
+  onError,
 }: {
   src: string;
   alt: string;
   className?: string;
   fallbackLabel?: string;
+  onLoad?: () => void;
+  onError?: () => void;
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -33,7 +37,7 @@ export function SafeImage({
         className={cn(
           "bg-sand-soft text-sand-strong",
           className,
-          "flex flex-col items-center justify-center gap-2",
+          "flex flex-col items-center justify-center gap-2 px-4 text-center",
         )}
       >
         <ImageOff className="size-5" aria-hidden="true" />
@@ -50,8 +54,14 @@ export function SafeImage({
       loading="lazy"
       decoding="async"
       referrerPolicy="no-referrer"
-      onLoad={() => setLoaded(true)}
-      onError={() => setFailedSrc(src)}
+      onLoad={() => {
+        setLoaded(true);
+        onLoad?.();
+      }}
+      onError={() => {
+        setFailedSrc(src);
+        onError?.();
+      }}
       className={cn(
         "bg-[#ece7dd] object-cover transition-opacity duration-500",
         loaded ? "opacity-100" : "opacity-0",
