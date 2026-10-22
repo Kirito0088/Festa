@@ -9,12 +9,20 @@ Research gathered on 2026-10-20 for Festa's submission to **PromptWars Virtual, 
 - Rewards are Prompt Credits by rank (rank 1 = 5,000 PC per challenge, ranks 301–400 = 500 PC). Credits expire 1 Jan 2027. Consistency bonuses: Top 50 three challenges in a row = 25,000 PC; top 5 Instagram reels = 4,000 PC; top 3 women developers = 1,500 PC. _(official)_
 - Unfair means (plagiarism, cheating, multiple accounts) lead to disqualification. _(official)_
 
-## Submission requirements ("Dual Submission")
+## Submission requirements
 
-_(official)_
+The official page asks for a "Dual Submission" _(official)_: the code and a live preview, plus a narrative (a technical blog post and a LinkedIn "Build-in-Public" post).
 
-1. **Technical:** the code (public repository) **and a live preview** of the app.
-2. **Narrative:** a technical blog post **and** a LinkedIn "Build-in-Public" post explaining how the problem was solved, not just the result.
+The Challenge 5 form, as summarised by a [participant's write-up](https://saurabh-12.blogspot.com/2026/10/promptwars-challenge-5-celebration.html) on 2026-10-22 _(observed; confirm on the form itself)_, asks for:
+
+1. A **public GitHub repository**, strictly under 10 MB.
+2. A **deployed link** with working core features. Festa's is https://festa-ten-blush.vercel.app.
+3. A **demo video**: an unlisted YouTube video, or Google Drive with sharing on.
+4. **"Deployed version updates"**: implemented features, at most 1,024 characters.
+5. **"GenAI services used"**: the models and where they are integrated, at most 1,024 characters.
+6. A **LinkedIn post** URL.
+
+There are **at most 3 submissions**, and the deadline is **1 November 2026, 11:59 PM IST**.
 
 ## Tooling rule — action needed
 
@@ -35,19 +43,18 @@ _(observed — consistent across several Challenge 3–5 repos)_
 
 ## How submissions are scored
 
-The Challenge 4 leaderboard shows scores out of 100, with the top 100 clustered between ~95 and ~98. That spread, and participants' reports, indicate an automated AI evaluator reads the repository and live app. _(observed)_
+The official pages don't publish weights; the FAQ says selection criteria are confidential _(official)_. The Challenge 5 brief says the code is evaluated by AI on **six parameters** _(observed, per the write-up above)_, and a team also tests the live app by hand. "Google Services Usage", which earlier notes listed, is **not** one of the six.
 
-Criteria repeatedly reported by participants _(observed)_:
+| Parameter                   | What the brief asks                                                                                                          | How Festa addresses it                                                                                                                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code Quality                | Organised, readable, maintainable, consistent; separate responsibilities                                                     | Strict TypeScript; pure tested logic in `lib/`; one Convex module per feature; ESLint and Prettier enforced in CI; ADRs in `docs/adr/`                                                                        |
+| Security                    | Protect keys, validate input, handle sensitive data carefully                                                                | Secrets only in Convex env; ownership checks on every function; server-side validation; schema-validated AI output; per-user and shared rate limits; CSP and security headers ([SECURITY.md](../SECURITY.md)) |
+| Efficiency                  | No unnecessary work, sensible AI requests, responsive app, loading and failure states                                        | One AI call per blueprint; token-aware Groq budgets with a cooldown after a 429; deterministic maths in code; static landing; pre-subscribed tab data; functions in Mumbai                                    |
+| Testing                     | Main workflows and edge cases: budgets, task updates, form validation, AI responses                                          | Vitest unit tests and convex-test integration tests (authorization, plan pipeline, concierge approval, rate limits, schedule); CI with coverage                                                               |
+| Accessibility               | Labels, contrast, keyboard navigation, clear errors, responsive layouts                                                      | axe-core: 0 violations on every screen; labelled fields with associated errors; keyboard drag-and-drop; reduced-motion support; 375 px without horizontal scroll                                              |
+| Problem Statement Alignment | Budget, timeline (deadlines, reminders, countdown, day-of schedule), vendor checklist, personalised ideas; AI must help plan | See the mapping table in the [README](../README.md#how-festa-answers-the-brief)                                                                                                                               |
 
-| Criterion                   | What evaluators appear to look for                                                         | How Festa addresses it                                                                                                                                                   |
-| --------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Code Quality                | Modular structure, strict typing, no dead code, clear naming                               | Strict TypeScript, feature folders, shared Zod schemas, ESLint                                                                                                           |
-| Security                    | No secrets in code, input validation, auth/ownership checks, rate limits, security headers | Groq key only in Convex env; every Convex function checks ownership; Zod + Convex validators; per-user AI rate limit; CSP and security headers in `next.config.ts`       |
-| Efficiency                  | Small bundles, few AI calls, caching, fast responses                                       | One AI call per blueprint; real-time Convex queries with indexes; deterministic maths in code                                                                            |
-| Testing                     | Unit tests on core logic, ideally integration tests                                        | Vitest for budget maths, deadline generation, AI-response parsing, fallback planner; `convex-test` for authorization                                                     |
-| Accessibility               | Semantic HTML, keyboard navigation, focus states, contrast, reduced motion                 | Radix primitives, visible focus rings, `prefers-reduced-motion`, labelled form fields                                                                                    |
-| Problem Statement Alignment | Solves the stated celebration/event-planning problem end to end                            | Wizard → AI blueprint → budget, timeline, vendors, moodboard, concierge                                                                                                  |
-| Google Services Usage       | Meaningful use of Google products                                                          | Google Fonts (Instrument Serif, Geist), Google Calendar "add event" links, keyless Google Maps venue embed. Gemini is deliberately **not** used (cost rule in the brief) |
+Google products Festa uses without paid APIs: Google Fonts (Instrument Serif, Geist), Google Calendar event links and reminders, and Google Maps search links. There is no Maps embed.
 
 ## Narrative checklist (Day 13)
 

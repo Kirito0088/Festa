@@ -1,56 +1,139 @@
-# Festa — Make room for moments
+# Festa: plan the celebration, not the spreadsheet
 
-Festa is an AI-powered celebration planner for weddings, birthdays, engagements and community events. A guided brief produces a validated blueprint (concept, palette, budget split, dated checklist, vendor plan, risks), then Festa keeps the budget, timeline, vendors, inspiration and an AI concierge in sync.
+[![CI](https://github.com/Kirito0088/Festa/actions/workflows/ci.yml/badge.svg)](https://github.com/Kirito0088/Festa/actions/workflows/ci.yml)
 
-Built for **PromptWars Virtual — Challenge 5: Celebration & Event Planner**. See [`docs/promptwars.md`](docs/promptwars.md) for challenge rules and how Festa maps to the evaluation criteria.
+**Live app:** https://festa-ten-blush.vercel.app. Click **Explore the demo** to open Meera and Kabir's sample engagement in Jaipur, with no sign-up.
 
-## Features
+Festa is an AI celebration planner for weddings, engagements, birthdays, baby showers, anniversaries and community events. You answer a few questions; Festa drafts a plan you can follow and keeps it in sync as things change:
 
-- **Celebration wizard** — 8 short steps, optional ones skippable, sensible defaults.
-- **AI blueprint** — Groq (`openai/gpt-oss-120b`, fallback `openai/gpt-oss-20b`) with strict JSON-schema output, Zod validation, retries, timeouts and rate-limit handling. If AI is unavailable, a deterministic built-in planner produces the same shape.
-- **Dashboard** — countdown, budget ring, checklist progress, upcoming deadlines, vendor bookings, live activity.
-- **Budget Studio** — estimates, actuals, deposits and payments; category chart; overspend detection. All arithmetic runs in integer minor units in app code; the AI only proposes percentages.
-- **Smart timeline** — event-relative deadlines that move with the date, filters, sorting, drag-and-drop reordering (keyboard accessible), Google Calendar links.
-- **Vendor desk** — quotes, contacts, booking and payment status, side-by-side comparison. Blueprint suggestions are categories only, never fabricated businesses.
-- **Inspiration board** — curated Unsplash library, image links, colour swatches, notes, graceful image fallbacks.
-- **Concierge** — reads the saved plan, explains trade-offs and proposes changes with deterministic before/after numbers. Nothing is applied until the user approves, every change is re-validated server-side, and there is no delete capability. An offline assistant handles budget and guest-count changes when AI is unavailable.
-- **Demo mode** — an isolated anonymous session seeded with a clearly labelled sample engagement.
+- a budget that always adds up;
+- a checklist whose deadlines move with the date;
+- a run sheet for the day itself;
+- the vendors to call, and the ideas you want to keep;
+- a concierge that proposes changes when the budget or the guest list moves.
 
-## Stack
+Built for **PromptWars Virtual, Challenge 5: Celebration & Event Planner**.
 
-Next.js 16 (App Router, Cache Components) · React 19 · TypeScript (strict) · Tailwind CSS 4 · shadcn/ui on Radix · Motion · Convex (database, functions, scheduler, Convex Auth, rate limiter) · Groq · Zod · React Hook Form · Recharts · dnd-kit · date-fns · Sonner · Vitest + convex-test.
+## How Festa answers the brief
 
-Google services used without paid APIs: Google Fonts (Instrument Serif, Geist), Google Calendar event templates, Google Maps search links.
+| The brief asks for                                                                                           | Where it lives in Festa                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A budget split across categories, with AI estimates labelled as estimates                                    | **Blueprint** suggests a split; **Budget Studio** turns it into lines with estimates, actuals, deposits and payments, a category chart and overspend warnings. Every figure is computed in code ([ADR 1](docs/adr/0001-money-in-code-not-in-the-model.md)).                                                                                 |
+| A timeline with deadlines, reminders, completion tracking, priorities and a countdown                        | **Timeline**: deadlines counted back from the day (they move when the date moves), priorities, filters, drag-and-drop ordering, a reminder button per task (Google Calendar) and a **Calendar reminders** download (`.ics` for any calendar, with an alert the evening before each task). The countdown postmark sits on every celebration. |
+| A day-of-event schedule                                                                                      | **On the day**, on the Timeline tab: an editable run sheet drafted from the celebration's type, activities and guest count.                                                                                                                                                                                                                 |
+| A vendor checklist with contacts and pending or confirmed status                                             | **Vendors**: categories suggested by the blueprint, contacts, quotes, status from researching to booked, payment status and side-by-side comparison. Festa never invents real businesses; demo vendors are labelled samples.                                                                                                                |
+| Personalised ideas by type, budget, guests, preferences and dietary needs, refined through follow-up prompts | **Blueprint** (concept, palette, budget split, tasks, vendors to book, risks) from an 8-step wizard; the **Inspiration** board; the **Concierge**, which refines the plan in conversation and proposes changes you approve.                                                                                                                 |
 
-## Setup
+## How the AI is used
+
+- **Blueprint generation.** Groq's `openai/gpt-oss-120b` (falling back to `openai/gpt-oss-20b`) drafts the concept, palette, budget percentages, dated tasks, vendor categories and risks. It is called from a Convex action with a strict JSON schema, and the output is validated with Zod before anything is saved.
+- **The concierge.** It reads the saved plan and answers in structured JSON. Its proposed edits are stored as a proposal and applied only on approval, after the server re-validates them ([ADR 2](docs/adr/0002-concierge-proposes-the-user-approves.md)).
+- **What the AI never does.** The model never does arithmetic. It returns percentages, and `lib/money.ts` turns them into exact amounts.
+- **When AI isn't available.** If the key is missing, the free tier is busy or the output fails validation, a built-in planner and an offline concierge take over. The UI always says which one answered ([ADR 3](docs/adr/0003-built-in-planner-as-ai-fallback.md)).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Browser
+    UI[Next.js 16 app<br/>React 19 client components]
+  end
+  subgraph Vercel["Vercel (bom1)"]
+    SSR[Static pages and<br/>Partial Prerender shells]
+  end
+  subgraph Convex["Convex (dynamic-hawk-395)"]
+    Q[Queries and mutations<br/>ownership checks, validation]
+    A[Actions<br/>blueprint, concierge]
+    RL[Rate limiter]
+    DB[(Database)]
+  end
+  Groq[Groq API]
+  UI -- HTML, JS --> SSR
+  UI <-- WebSocket: live queries --> Q
+  Q --> DB
+  Q -- schedules --> A
+  A --> RL
+  A -- validated JSON --> Groq
+  A --> Q
+```
+
+- **`lib/`** holds pure, unit-tested domain logic shared by Convex and the UI: money, budget, dates, tasks, the run sheet, calendar files, AI schemas and the Groq client, the built-in planner and the concierge.
+- **`convex/`** holds the schema, access helpers (`lib/access.ts`), input validation (`lib/input.ts`), rate limits (`lib/rateLimits.ts`), one module per feature, plan generation (`plans.ts`) and the concierge (`concierge.ts`).
+- **`components/`** holds the UI by feature. `components/events/event-workspace.tsx` subscribes to every section's data when an event opens, so tabs switch without waiting ([ADR 4](docs/adr/0004-warm-every-section-on-event-open.md)).
+- **`docs/adr/`** records the decisions behind the design.
+
+**Stack:**
+
+- Next.js 16 (App Router, Cache Components), React 19 and strict TypeScript.
+- Tailwind CSS 4, Radix primitives and Motion.
+- Convex: database, functions, scheduler, Convex Auth and the rate-limiter component.
+- Groq, Zod, React Hook Form, Recharts, dnd-kit and date-fns.
+- Vitest with convex-test.
+
+## Quality
+
+**Security.** Details are in [SECURITY.md](SECURITY.md):
+
+- Secrets live only in Convex environment variables.
+- Every function derives the user from the session and checks ownership.
+- Inputs are validated on the server, and AI output is schema-validated.
+- Per-user and shared rate limits cover AI and writes.
+- The site sends a strict set of security headers, including a CSP.
+
+**Accessibility.**
+
+- WCAG 2.1 AA, checked with axe-core on every screen: 0 violations.
+- Semantic landmarks and a skip link.
+- Labelled fields with associated errors.
+- Full keyboard support, including drag-and-drop reordering.
+- Visible focus rings and AA contrast. The budget chart's colours were validated, and it ships a legend, tooltips and the ledger table as a text equivalent.
+- With reduced motion turned on, the landing story becomes still frames and confetti is skipped.
+
+**Performance.**
+
+- The landing page is static, and its LCP is the headline text: 224 ms on desktop, 1.28 s on a throttled phone.
+- Event tabs switch without data skeletons.
+- The heavier forms load on demand, and the budget chart draws after the page.
+- Functions run in Mumbai, close to users.
+
+**Testing.** Run `npm test` for the full suite, and `npm test -- --coverage` for v8 coverage.
+
+- Vitest unit tests cover money, budget, dates, tasks, the run sheet, calendar files, the plan note, colour contrast, AI parsing and the concierge.
+- convex-test integration tests cover authorization boundaries, validation, the plan pipeline, the concierge's approval flow, demo seeding, rate limits and the day-of schedule.
+- CI runs typecheck, lint, the format check, the tests with coverage and a production build on every push.
+
+## Run it locally
 
 ```bash
 npm install
-npx convex dev          # creates a deployment and writes .env.local (keep running)
-npm run dev             # http://localhost:3000
+npx convex dev   # creates a dev deployment and writes .env.local; keep it running
+npm run dev      # http://localhost:3000
 ```
 
-Convex Auth needs `JWT_PRIVATE_KEY`, `JWKS` and `SITE_URL` on the Convex deployment (see https://labs.convex.dev/auth/setup/manual). AI is optional:
+Convex Auth needs `JWT_PRIVATE_KEY`, `JWKS` and `SITE_URL` on the Convex deployment (see the [Convex Auth manual setup](https://labs.convex.dev/auth/setup/manual)). AI is optional: without a key, the built-in planner answers.
 
 ```bash
-npx convex env set GROQ_API_KEY=<your free Groq key>
+npx convex env set GROQ_API_KEY   # paste a free Groq key when prompted
 ```
 
-Optional: `GROQ_MODEL`, `GROQ_FALLBACK_MODEL` to override models. Secrets live only in Convex environment variables, never in the browser bundle.
+`.env.example` lists every variable. `npm run dev` compiles each route on first visit, so it is several times slower than the deployed app; judge speed with `npm run preview`, which builds and serves production locally.
 
-## Scripts
+**Scripts:**
 
-`npm run check` (typecheck + lint + tests) · `npm test` · `npm run typecheck` · `npm run lint` · `npm run format` · `npm run build` · `npm run preview` (production build on http://localhost:3000)
-
-`npm run dev` compiles each route on first visit and runs React in development mode, so it is several times slower than the deployed app. Judge speed with `npm run preview`.
-
-## Architecture notes
-
-- `lib/` — pure, tested domain logic shared by Convex and the UI (money, budget, dates, AI schemas and client, planner, concierge).
-- `convex/` — schema, authorization helpers (`lib/access.ts`), CRUD functions, plan generation (`plans.ts`), concierge (`concierge.ts`), demo seeding.
-- Every event-owned record stores `ownerId`; every public function checks ownership. Foreign and missing IDs return the same "not found" error.
-- AI calls run only in Convex actions, are rate-limited per user and globally (`@convex-dev/rate-limiter`), and their output never touches the database without validation.
+| Script            | What it does                            |
+| ----------------- | --------------------------------------- |
+| `npm run check`   | Typecheck, lint, format check and tests |
+| `npm test`        | Tests (`-- --coverage` for coverage)    |
+| `npm run build`   | Production build                        |
+| `npm run preview` | Build and serve production locally      |
+| `npm run format`  | Format with Prettier                    |
 
 ## Deployment
 
-Convex free plan + Vercel Hobby. Set the Vercel build command to `npx convex deploy --cmd 'npm run build'` with `CONVEX_DEPLOY_KEY` configured. Not yet deployed.
+- **Frontend:** Vercel (Hobby). `vercel.json` sets the build command with the production Convex URLs and runs functions in Mumbai (`bom1`).
+- **Backend:** Convex. Deploy it with `npx convex deploy` whenever `convex/` changes ([ADR 6](docs/adr/0006-deploy-backend-from-the-cli.md)).
+- **Production Convex environment:** `JWT_PRIVATE_KEY`, `JWKS`, `SITE_URL` and `GROQ_API_KEY`.
+
+## Licence
+
+[MIT](LICENSE)
