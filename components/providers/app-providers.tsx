@@ -14,7 +14,10 @@ if (!convexUrl) {
   throw new Error("NEXT_PUBLIC_CONVEX_URL is not set. Run `npx convex dev` to create .env.local.");
 }
 
-const convex = new ConvexReactClient(convexUrl);
+// The default "unsaved changes" guard also fires while Convex Auth refreshes
+// the session on page load, so a quick reload asked "Leave site?" for no
+// reason. Festa's writes finish in milliseconds, so the guard adds nothing.
+const convex = new ConvexReactClient(convexUrl, { unsavedChangesWarning: false });
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (

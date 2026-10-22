@@ -141,6 +141,8 @@
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    /* Keeps focused and linked-to elements clear of the sticky app bar and section nav. */
+    scroll-padding-top: 8rem;
   }
   body {
     @apply bg-background text-foreground antialiased;
