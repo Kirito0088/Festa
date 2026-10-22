@@ -3,6 +3,7 @@ import { LIMITS } from "../lib/constants";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { logActivity, requireOwnedDoc, requireOwnedEvent, touchEvent } from "./lib/access";
+import { requireRoomFor } from "./lib/caps";
 import { limitWrites } from "./lib/rateLimits";
 import { cleanDate, cleanLongText, cleanOffsetDays, cleanText, invalid } from "./lib/input";
 import { vCategory, vDueMode, vPriority } from "./lib/validators";
@@ -49,6 +50,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
     await limitWrites(ctx, userId);
+    await requireRoomFor(ctx, "tasks", event._id);
     const title = cleanText(args.title, "Title", LIMITS.nameMax, true);
     const last = await ctx.db
       .query("tasks")

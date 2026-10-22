@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { LIMITS } from "../lib/constants";
 import { mutation, query } from "./_generated/server";
 import { logActivity, requireOwnedDoc, requireOwnedEvent, touchEvent } from "./lib/access";
+import { requireRoomFor } from "./lib/caps";
 import { limitWrites } from "./lib/rateLimits";
 import { cleanLongText, cleanMoney, cleanOptionalMoney, cleanText } from "./lib/input";
 import { vCategory } from "./lib/validators";
@@ -33,6 +34,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
     await limitWrites(ctx, userId);
+    await requireRoomFor(ctx, "budgetItems", event._id);
     const name = cleanText(args.name, "Name", LIMITS.nameMax, true);
     const id = await ctx.db.insert("budgetItems", {
       eventId: event._id,

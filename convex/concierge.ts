@@ -25,6 +25,7 @@ import {
   type MutationCtx,
 } from "./_generated/server";
 import { logActivity, requireOwnedDoc, requireOwnedEvent, touchEvent } from "./lib/access";
+import { hasRoomFor } from "./lib/caps";
 import { limitWrites } from "./lib/rateLimits";
 import { groqModels, toPlanInput } from "./lib/plan";
 import { cleanGuestCount, cleanLongText, cleanMoney, invalid, resolveToday } from "./lib/input";
@@ -387,6 +388,7 @@ async function applyChange(
       return true;
     }
     case "add_budget_item": {
+      if (!(await hasRoomFor(ctx, "budgetItems", event._id))) return false;
       await ctx.db.insert("budgetItems", {
         eventId: event._id,
         ownerId: event.ownerId,
@@ -401,6 +403,7 @@ async function applyChange(
       return true;
     }
     case "add_task": {
+      if (!(await hasRoomFor(ctx, "tasks", event._id))) return false;
       const last = await ctx.db
         .query("tasks")
         .withIndex("by_eventId_and_order", (q) => q.eq("eventId", event._id))

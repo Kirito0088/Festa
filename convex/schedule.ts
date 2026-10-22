@@ -3,6 +3,7 @@ import { LIMITS } from "../lib/constants";
 import { isScheduleTime, scheduleSortKey } from "../lib/plan/run-sheet";
 import { mutation, query } from "./_generated/server";
 import { logActivity, requireOwnedDoc, requireOwnedEvent, touchEvent } from "./lib/access";
+import { requireRoomFor } from "./lib/caps";
 import { cleanLongText, cleanText, invalid } from "./lib/input";
 import { limitWrites } from "./lib/rateLimits";
 import schema from "./schema";
@@ -33,14 +34,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
     await limitWrites(ctx, userId);
-    // `list` returns at most this many, so a longer sheet would hide its latest moments.
-    const existing = await ctx.db
-      .query("scheduleItems")
-      .withIndex("by_eventId_and_time", (q) => q.eq("eventId", event._id))
-      .take(LIMITS.scheduleMax);
-    if (existing.length >= LIMITS.scheduleMax) {
-      throw invalid(`The day's schedule holds up to ${LIMITS.scheduleMax} moments. Remove one first.`);
-    }
+    await requireRoomFor(ctx, "scheduleItems", event._id);
     const title = cleanText(args.title, "Title", LIMITS.nameMax, true);
     const id = await ctx.db.insert("scheduleItems", {
       eventId: event._id,

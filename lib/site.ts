@@ -8,7 +8,6 @@ export const SITE_DESCRIPTION =
 
 // Browsers read a backslash as a slash and drop tabs and newlines, so
 // "/\evil.example" and "/<tab>/evil.example" both lead to another site.
-// eslint-disable-next-line no-control-regex -- control characters are what it rejects
 const UNSAFE_PATH = /[\u0000-\u001f\u007f\\]/;
 
 /**

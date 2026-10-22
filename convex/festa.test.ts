@@ -472,3 +472,155 @@ describe("day-of schedule", () => {
     expect(await owner.as.query(api.schedule.list, { eventId })).toHaveLength(LIMITS.scheduleMax);
   });
 });
+
+describe("per-event caps", () => {
+  // Each create stops where the matching list query stops, so nothing saved is hidden.
+  async function fullEvent() {
+    const t = setup();
+    const owner = await createUser(t);
+    const eventId = await createEvent(owner, t);
+    await t.run(async (ctx) => {
+      const base = { eventId, ownerId: owner.userId };
+      const fill = async (count: number, insert: (i: number) => Promise<unknown>) => {
+        for (let i = count; i < LIMITS.listMax; i++) await insert(i);
+      };
+      const has = async (table: "budgetItems" | "tasks" | "vendors" | "moodboardItems") =>
+        (await ctx.db.query(table).collect()).length;
+      await fill(await has("budgetItems"), (i) =>
+        ctx.db.insert("budgetItems", {
+          ...base,
+          category: "other",
+          name: `Line ${i}`,
+          estimated: 100,
+          actual: null,
+          paid: 0,
+          notes: "",
+          updatedAt: 0,
+        }),
+      );
+      await fill(await has("tasks"), (i) =>
+        ctx.db.insert("tasks", {
+          ...base,
+          title: `Task ${i}`,
+          notes: "",
+          category: "other",
+          priority: "low",
+          dueMode: "none",
+          completed: false,
+          order: 1_000_000 + i,
+          source: "user",
+        }),
+      );
+      await fill(await has("vendors"), (i) =>
+        ctx.db.insert("vendors", {
+          ...base,
+          name: `Vendor ${i}`,
+          category: "other",
+          status: "researching",
+          contactName: "",
+          phone: "",
+          email: "",
+          website: "",
+          quoteEstimated: null,
+          quoteActual: null,
+          paymentStatus: "unpaid",
+          notes: "",
+          isSample: false,
+          updatedAt: 0,
+        }),
+      );
+      await fill(await has("moodboardItems"), (i) =>
+        ctx.db.insert("moodboardItems", {
+          ...base,
+          kind: "swatch",
+          color: "#A7B5A0",
+          title: `Swatch ${i}`,
+          category: "theme",
+          note: "",
+        }),
+      );
+    });
+    return { t, owner, eventId };
+  }
+
+  it("refuses a new budget line, task, vendor or inspiration item once the event is full", async () => {
+    const { owner, eventId } = await fullEvent();
+    await expect(
+      owner.as.mutation(api.budget.create, {
+        eventId,
+        category: "other",
+        name: "One more",
+        estimated: 100,
+        actual: null,
+        paid: 0,
+        notes: "",
+      }),
+    ).rejects.toThrow(/up to 500 budget lines/);
+    await expect(
+      owner.as.mutation(api.tasks.create, {
+        eventId,
+        title: "One more",
+        notes: "",
+        category: "other",
+        priority: "low",
+        dueMode: "none",
+      }),
+    ).rejects.toThrow(/up to 500 tasks/);
+    await expect(
+      owner.as.mutation(api.vendors.create, {
+        eventId,
+        name: "One more",
+        category: "other",
+        status: "researching",
+        contactName: "",
+        phone: "",
+        email: "",
+        website: "",
+        quoteEstimated: null,
+        quoteActual: null,
+        paymentStatus: "unpaid",
+        notes: "",
+      }),
+    ).rejects.toThrow(/up to 500 vendors/);
+    await expect(
+      owner.as.mutation(api.moodboard.addSwatch, { eventId, color: "#A7B5A0", title: "One more", note: "" }),
+    ).rejects.toThrow(/up to 500 inspiration items/);
+    expect(await owner.as.query(api.tasks.list, { eventId })).toHaveLength(LIMITS.listMax);
+  });
+
+  it("skips a concierge addition that would overflow the plan", async () => {
+    const { t, owner, eventId } = await fullEvent();
+    const messageId = await t.run((ctx) =>
+      ctx.db.insert("conciergeMessages", {
+        eventId,
+        ownerId: owner.userId,
+        role: "assistant",
+        content: "Two ideas.",
+        status: "done",
+        engine: "offline",
+        proposal: {
+          title: "Add a task and a line",
+          status: "pending",
+          changes: [
+            {
+              type: "add_task",
+              title: "Book a band",
+              category: "other",
+              priority: "low",
+              offsetDays: 30,
+              reason: "",
+            },
+            { type: "set_guest_count", count: 150, reason: "" },
+          ],
+        },
+      }),
+    );
+    const result = await owner.as.mutation(api.concierge.applyProposal, {
+      messageId,
+      changeIndexes: [0, 1],
+      today: TODAY,
+    });
+    expect(result).toEqual({ applied: 1, skipped: 1 });
+    expect(await owner.as.query(api.tasks.list, { eventId })).toHaveLength(LIMITS.listMax);
+  });
+});

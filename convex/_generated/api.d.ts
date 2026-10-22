@@ -16,6 +16,7 @@ import type * as demo from "../demo.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as lib_access from "../lib/access.js";
+import type * as lib_caps from "../lib/caps.js";
 import type * as lib_cascade from "../lib/cascade.js";
 import type * as lib_input from "../lib/input.js";
 import type * as lib_plan from "../lib/plan.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   http: typeof http;
   "lib/access": typeof lib_access;
+  "lib/caps": typeof lib_caps;
   "lib/cascade": typeof lib_cascade;
   "lib/input": typeof lib_input;
   "lib/plan": typeof lib_plan;

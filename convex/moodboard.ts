@@ -4,6 +4,7 @@ import { isSafeImageUrl } from "../lib/inspiration";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { logActivity, requireOwnedDoc, requireOwnedEvent, touchEvent } from "./lib/access";
+import { requireRoomFor } from "./lib/caps";
 import { limitWrites } from "./lib/rateLimits";
 import { cleanLongText, cleanText, invalid } from "./lib/input";
 import { vMoodboardCategory } from "./lib/validators";
@@ -37,6 +38,7 @@ export const addImage = mutation({
   handler: async (ctx, args) => {
     const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
     await limitWrites(ctx, userId);
+    await requireRoomFor(ctx, "moodboardItems", event._id);
     const imageUrl = args.imageUrl.trim();
     if (!isSafeImageUrl(imageUrl)) throw invalid("Use an image link that starts with https://");
     const title = cleanText(args.title, "Title", LIMITS.nameMax, true);
@@ -62,6 +64,7 @@ export const addSwatch = mutation({
   handler: async (ctx, args) => {
     const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
     await limitWrites(ctx, userId);
+    await requireRoomFor(ctx, "moodboardItems", event._id);
     const color = args.color.trim().toUpperCase();
     if (!HEX.test(color)) throw invalid("Choose a colour in #RRGGBB format.");
     const title = cleanText(args.title, "Name", 60, true);
