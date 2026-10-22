@@ -1,0 +1,233 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Festa design tokens.
+ * Brand: warm ivory, charcoal, sage, blush and sand. Semantic tokens map the
+ * brand onto roles (surface, text, border, status) so components never
+ * reference raw hex values.
+ */
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-heading: var(--font-instrument-serif), ui-serif, Georgia, serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ivory: var(--ivory);
+  --color-charcoal: var(--charcoal);
+  --color-sage: var(--sage);
+  --color-sage-strong: var(--sage-strong);
+  --color-sage-soft: var(--sage-soft);
+  --color-blush: var(--blush);
+  --color-blush-strong: var(--blush-strong);
+  --color-blush-soft: var(--blush-soft);
+  --color-sand: var(--sand);
+  --color-sand-strong: var(--sand-strong);
+  --color-sand-soft: var(--sand-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 2.5);
+
+  --shadow-hairline: 0 0 0 1px var(--border);
+  --shadow-soft: 0 1px 2px rgb(32 33 31 / 0.04), 0 4px 16px -8px rgb(32 33 31 / 0.08);
+  --shadow-lifted: 0 2px 4px rgb(32 33 31 / 0.04), 0 18px 40px -18px rgb(32 33 31 / 0.22);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --ivory: #f8f6f1;
+  --charcoal: #20211f;
+  --sage: #a7b5a0;
+  --sage-strong: #56694f;
+  --sage-soft: #e6ebe2;
+  --blush: #e9c7c3;
+  --blush-strong: #a4534a;
+  --blush-soft: #f6e8e6;
+  --sand: #d9c8ad;
+  --sand-strong: #776141;
+  --sand-soft: #f1e9dc;
+
+  /* Surfaces and text */
+  --background: var(--ivory);
+  --foreground: var(--charcoal);
+  --card: #fffefb;
+  --card-foreground: var(--charcoal);
+  --popover: #fffefb;
+  --popover-foreground: var(--charcoal);
+  --primary: var(--charcoal);
+  --primary-foreground: var(--ivory);
+  --secondary: #efebe3;
+  --secondary-foreground: var(--charcoal);
+  --muted: #efebe3;
+  --muted-foreground: #66655e;
+  --accent: var(--sage-soft);
+  --accent-foreground: var(--charcoal);
+  --border: #e5dfd4;
+  --input: #dad3c6;
+  --ring: #6f8268;
+
+  /* Status */
+  --success: var(--sage-strong);
+  --warning: #8a5d17;
+  --danger: #a63d2a;
+  --danger-soft: #f7e3de;
+  --destructive: var(--danger);
+
+  /* Charts: sage, blush, sand, charcoal and a stone mid-tone */
+  --chart-1: #7e9277;
+  --chart-2: #cf9d96;
+  --chart-3: #c4ab83;
+  --chart-4: #20211f;
+  --chart-5: #a8a397;
+
+  --radius: 0.875rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  ::selection {
+    background: var(--blush);
+    color: var(--charcoal);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  button,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  /* Editorial serif display type: tight leading, slightly negative tracking. */
+  .type-display {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    line-height: 1.02;
+    letter-spacing: -0.015em;
+  }
+  .type-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  /* Small uppercase labels get positive tracking for legibility. */
+  .type-eyebrow {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Translucent chrome: content scrolls underneath. */
+  .material-bar {
+    --material-filter: blur(20px) saturate(170%);
+    background: rgb(248 246 241 / 0.78);
+    /* Via a variable so Lightning CSS keeps the unprefixed property too. */
+    backdrop-filter: var(--material-filter);
+  }
+
+  .surface {
+    background: var(--card);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-hairline), var(--shadow-soft);
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .material-bar {
+    --material-filter: none;
+    background: var(--ivory);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: #b9b0a0;
+    --input: #9c9383;
+    --muted-foreground: #4a4943;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

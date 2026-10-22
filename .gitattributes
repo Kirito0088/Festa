@@ -1,0 +1,5 @@
+# Keep LF everywhere so Prettier (endOfLine: lf) and the checkout agree on Windows.
+* text=auto eol=lf
+*.ico binary
+*.png binary
+*.jpg binary

@@ -1,0 +1,269 @@
+import { ConvexError, v } from "convex/values";
+import type { Category } from "../lib/constants";
+import { shiftIsoDate } from "../lib/dates";
+import { unsplashUrl } from "../lib/inspiration";
+import { materializePlan } from "../lib/plan/materialize";
+import { templateBlueprint, type PlanInput } from "../lib/plan/template";
+import type { Id } from "./_generated/dataModel";
+import { mutation } from "./_generated/server";
+import { logActivity, requireUserId } from "./lib/access";
+import { resolveToday } from "./lib/input";
+import { rateLimiter } from "./lib/rateLimits";
+
+/**
+ * Seeds the sample celebration for a demo (anonymous) session. Demo users
+ * are ordinary isolated accounts, so sample data never mixes with anyone
+ * else's plans. All vendors are illustrative and labelled as such.
+ */
+
+const SAMPLE_NOTE = "Illustrative sample record — not a real business, quote or booking.";
+
+const SAMPLE_VENDORS: Array<{
+  name: string;
+  category: Category;
+  status: "researching" | "contacted" | "quoted" | "booked" | "declined";
+  paymentStatus: "unpaid" | "deposit" | "paid";
+  quoteEstimated: number;
+  quoteActual: number | null;
+}> = [
+  {
+    name: "Sample Haveli Venue",
+    category: "venue",
+    status: "booked",
+    paymentStatus: "deposit",
+    quoteEstimated: 42000,
+    quoteActual: 46000,
+  },
+  {
+    name: "Sample Rasoi Caterers",
+    category: "catering",
+    status: "quoted",
+    paymentStatus: "unpaid",
+    quoteEstimated: 66000,
+    quoteActual: null,
+  },
+  {
+    name: "Sample Marigold Decor Studio",
+    category: "decor",
+    status: "contacted",
+    paymentStatus: "unpaid",
+    quoteEstimated: 28000,
+    quoteActual: null,
+  },
+  {
+    name: "Sample Frames Photography",
+    category: "photography",
+    status: "booked",
+    paymentStatus: "paid",
+    quoteEstimated: 20000,
+    quoteActual: 18000,
+  },
+  {
+    name: "Sample Strings Live Band",
+    category: "entertainment",
+    status: "researching",
+    paymentStatus: "unpaid",
+    quoteEstimated: 14000,
+    quoteActual: null,
+  },
+];
+
+const SAMPLE_MOODBOARD = [
+  {
+    id: "1465495976277-4387d4b0b4c6",
+    title: "Rings and peach roses",
+    category: "theme",
+    note: "The feeling we want: soft, warm and personal.",
+  },
+  {
+    id: "1587271407850-8d438ca9fdf2",
+    title: "Floral mandap",
+    category: "decor",
+    note: "Love the marigold and white mix for the stage.",
+  },
+  {
+    id: "1599661046289-e31897846e41",
+    title: "Hilltop fort",
+    category: "venue",
+    note: "Heritage backdrop for couple portraits.",
+  },
+  {
+    id: "1585937421612-70a008356fbe",
+    title: "North Indian curries",
+    category: "food",
+    note: "Dal makhani and paneer for the main course.",
+  },
+  {
+    id: "1549465220-1a8b9238cd48",
+    title: "Gold-ribbon invitation box",
+    category: "invitations",
+    note: "Boxed invites for close family only.",
+  },
+] as const;
+
+export const start = mutation({
+  args: { today: v.optional(v.string()) },
+  returns: v.id("events"),
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const user = await ctx.db.get("users", userId);
+    if (!user?.isAnonymous) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "Sample data is only available in demo sessions.",
+      });
+    }
+
+    const existing = await ctx.db
+      .query("events")
+      .withIndex("by_ownerId_and_date", (q) => q.eq("ownerId", userId))
+      .take(20);
+    const demo = existing.find((event) => event.isDemo);
+    if (demo) return demo._id;
+
+    const limit = await rateLimiter.limit(ctx, "demoSeedPerUser", { key: userId });
+    if (!limit.ok) {
+      throw new ConvexError({
+        code: "RATE_LIMITED",
+        message: "Please wait a little before reseeding the demo.",
+      });
+    }
+
+    const today = resolveToday(args.today);
+    const input: PlanInput = {
+      type: "engagement",
+      name: "Meera & Kabir's Engagement",
+      date: shiftIsoDate(today, 75),
+      city: "Jaipur",
+      venue: "Heritage property",
+      guestCount: 120,
+      budget: 200000,
+      currency: "INR",
+      styles: ["Traditional", "Elegant"],
+      atmosphere: "Warm, festive and family-first",
+      foodPreferences: ["Vegetarian", "Jain", "Live counters"],
+      activities: ["Ring ceremony", "Live music", "Photo booth"],
+      notes: "Grandparents attending: keep seating close to the stage and avoid long walks.",
+    };
+
+    const eventId = await ctx.db.insert("events", {
+      ...input,
+      ownerId: userId,
+      isDemo: true,
+      planStatus: "ready",
+      updatedAt: Date.now(),
+    });
+    const event = await ctx.db.get("events", eventId);
+    if (!event) throw new Error("Demo event was not created");
+
+    const blueprint = templateBlueprint(input);
+    await ctx.db.insert("blueprints", {
+      eventId,
+      ownerId: userId,
+      source: "sample",
+      notice: "Sample blueprint generated by Festa's built-in planner for the demo.",
+      content: blueprint,
+    });
+
+    const plan = materializePlan(blueprint, input, today);
+    const now = Date.now();
+    const budgetIds = new Map<Category, Id<"budgetItems">>();
+    for (const item of plan.budgetItems) {
+      const sample = SAMPLE_VENDORS.find((vendor) => vendor.category === item.category);
+      const actual = sample?.quoteActual ?? null;
+      const paid =
+        sample?.paymentStatus === "paid"
+          ? (actual ?? item.estimated)
+          : sample?.paymentStatus === "deposit"
+            ? 20000
+            : 0;
+      const id = await ctx.db.insert("budgetItems", {
+        eventId,
+        ownerId: userId,
+        category: item.category,
+        name: item.name,
+        estimated: item.estimated,
+        actual,
+        paid,
+        notes: item.notes,
+        updatedAt: now,
+      });
+      budgetIds.set(item.category, id);
+    }
+
+    for (const [index, task] of plan.tasks.entries()) {
+      await ctx.db.insert("tasks", {
+        eventId,
+        ownerId: userId,
+        title: task.title,
+        notes: task.notes,
+        category: task.category,
+        priority: task.priority,
+        dueMode: "relative",
+        offsetDays: task.offsetDays,
+        // The earliest few planning steps are already done in the sample.
+        completed: index < 4,
+        completedAt: index < 4 ? now : undefined,
+        order: (index + 1) * 1000,
+        source: "sample",
+      });
+    }
+
+    for (const vendor of SAMPLE_VENDORS) {
+      await ctx.db.insert("vendors", {
+        eventId,
+        ownerId: userId,
+        name: vendor.name,
+        category: vendor.category,
+        contactName: "",
+        phone: "",
+        email: "",
+        website: "",
+        quoteEstimated: vendor.quoteEstimated,
+        quoteActual: vendor.quoteActual,
+        status: vendor.status,
+        paymentStatus: vendor.paymentStatus,
+        notes: SAMPLE_NOTE,
+        isSample: true,
+        updatedAt: now,
+      });
+    }
+
+    for (const item of SAMPLE_MOODBOARD) {
+      await ctx.db.insert("moodboardItems", {
+        eventId,
+        ownerId: userId,
+        kind: "image",
+        imageUrl: unsplashUrl(item.id),
+        title: item.title,
+        category: item.category,
+        note: item.note,
+        credit: "Unsplash",
+      });
+    }
+    for (const swatch of blueprint.palette.slice(0, 3)) {
+      await ctx.db.insert("moodboardItems", {
+        eventId,
+        ownerId: userId,
+        kind: "swatch",
+        color: swatch.hex,
+        title: swatch.name,
+        category: "colors",
+        note: "",
+      });
+    }
+
+    await ctx.db.insert("conciergeMessages", {
+      eventId,
+      ownerId: userId,
+      role: "assistant",
+      content:
+        "Hi! I'm the Festa concierge. I can read this plan and suggest changes — for example, try “Our budget has dropped from ₹2,00,000 to ₹1,60,000. Help me adjust the plan.” I'll explain the trade-offs and nothing changes until you approve it.",
+      status: "done",
+      engine: "offline",
+    });
+
+    await logActivity(ctx, event, "event", "Demo celebration created with sample data");
+    return eventId;
+  },
+});

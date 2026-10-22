@@ -1,0 +1,117 @@
+import { addDays, differenceInCalendarDays, format, isValid, parse, subDays } from "date-fns";
+
+/**
+ * Event and task dates are calendar dates stored as `YYYY-MM-DD` strings.
+ * They have no time zone: "the wedding is on 14 Feb" means the same day
+ * everywhere, so we never convert them through UTC timestamps.
+ */
+export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function parseIsoDate(value: string): Date {
+  const date = parse(value, "yyyy-MM-dd", new Date(2000, 0, 1));
+  if (!ISO_DATE.test(value) || !isValid(date)) {
+    throw new Error(`Invalid date: ${value}`);
+  }
+  return date;
+}
+
+export function isIsoDate(value: string): boolean {
+  if (!ISO_DATE.test(value)) return false;
+  return isValid(parse(value, "yyyy-MM-dd", new Date(2000, 0, 1)));
+}
+
+export function toIsoDate(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
+
+export function shiftIsoDate(value: string, days: number): string {
+  return toIsoDate(addDays(parseIsoDate(value), days));
+}
+
+export function daysBetween(from: string, to: string): number {
+  return differenceInCalendarDays(parseIsoDate(to), parseIsoDate(from));
+}
+
+export function formatIsoDate(value: string, pattern: "long" | "short" | "weekday" = "long"): string {
+  const date = parseIsoDate(value);
+  if (pattern === "short") return format(date, "d MMM");
+  if (pattern === "weekday") return format(date, "EEE, d MMM yyyy");
+  return format(date, "d MMMM yyyy");
+}
+
+export type DueMode = "relative" | "fixed" | "none";
+
+export type TaskDue = {
+  dueMode: DueMode;
+  /** Days before the event, for relative deadlines. */
+  offsetDays?: number;
+  dueDate?: string;
+};
+
+/**
+ * Relative deadlines follow the event: move the event and every relative
+ * task moves with it.
+ */
+export function resolveDueDate(task: TaskDue, eventDate: string): string | null {
+  if (task.dueMode === "relative" && task.offsetDays !== undefined) {
+    return toIsoDate(subDays(parseIsoDate(eventDate), task.offsetDays));
+  }
+  if (task.dueMode === "fixed" && task.dueDate) return task.dueDate;
+  return null;
+}
+
+/**
+ * A generated task cannot be due before today. If the ideal lead time has
+ * already passed, the task is due today instead.
+ */
+export function clampOffsetDays(idealOffset: number, eventDate: string, today: string): number {
+  const daysLeft = Math.max(0, daysBetween(today, eventDate));
+  return Math.max(0, Math.min(Math.round(idealOffset), daysLeft));
+}
+
+export type DeadlineState = "done" | "overdue" | "today" | "soon" | "upcoming" | "none";
+
+export function deadlineState(dueDate: string | null, today: string, completed: boolean): DeadlineState {
+  if (completed) return "done";
+  if (!dueDate) return "none";
+  const diff = daysBetween(today, dueDate);
+  if (diff < 0) return "overdue";
+  if (diff === 0) return "today";
+  if (diff <= 7) return "soon";
+  return "upcoming";
+}
+
+export function relativeDayLabel(target: string, today: string): string {
+  const diff = daysBetween(today, target);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  if (diff > 0) return `In ${diff} days`;
+  return `${Math.abs(diff)} days ago`;
+}
+
+export type Countdown = {
+  days: number;
+  weeks: number;
+  isPast: boolean;
+  isToday: boolean;
+};
+
+export function countdownTo(eventDate: string, today: string): Countdown {
+  const days = daysBetween(today, eventDate);
+  return {
+    days,
+    weeks: Math.floor(Math.max(0, days) / 7),
+    isPast: days < 0,
+    isToday: days === 0,
+  };
+}
+
+/** Human description of a relative deadline, e.g. "6 weeks before". */
+export function describeOffset(offsetDays: number): string {
+  if (offsetDays === 0) return "On the day";
+  if (offsetDays % 30 === 0 && offsetDays >= 60) return `${offsetDays / 30} months before`;
+  if (offsetDays % 7 === 0 && offsetDays >= 14) return `${offsetDays / 7} weeks before`;
+  if (offsetDays === 1) return "1 day before";
+  return `${offsetDays} days before`;
+}
