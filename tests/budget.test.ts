@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { committedCost, isLineOverspent, paymentStatusOf, summarizeBudget, type BudgetLine } from "@/lib/budget";
+import {
+  committedCost,
+  isLineOverspent,
+  paymentStatusOf,
+  summarizeBudget,
+  type BudgetLine,
+} from "@/lib/budget";
 
 const line = (overrides: Partial<BudgetLine>): BudgetLine => ({
   category: "venue",

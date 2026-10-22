@@ -3,3 +3,8 @@ node_modules
 convex/_generated
 .agents
 package-lock.json
+.claude
+.convex
+.playwright-mcp
+skills-lock.json
+coverage

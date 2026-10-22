@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { fallbackConcierge, findAmounts, pickTargetAmount, type FallbackContext } from "@/lib/concierge/fallback";
+import {
+  fallbackConcierge,
+  findAmounts,
+  pickTargetAmount,
+  type FallbackContext,
+} from "@/lib/concierge/fallback";
 import { previewProposal } from "@/lib/concierge/preview";
 import {
   normalizeProposal,
@@ -20,9 +25,9 @@ describe("amount parsing", () => {
   });
 
   it("picks the new amount in a 'from X to Y' sentence", () => {
-    expect(pickTargetAmount("My budget has dropped from ₹2,00,000 to ₹1,60,000. Help me adjust the plan.")).toBe(
-      160_000,
-    );
+    expect(
+      pickTargetAmount("My budget has dropped from ₹2,00,000 to ₹1,60,000. Help me adjust the plan."),
+    ).toBe(160_000);
     expect(pickTargetAmount("Cut the budget to 1.5 lakh")).toBe(150_000);
     expect(pickTargetAmount("we have 120 guests")).toBeNull();
   });
@@ -36,7 +41,14 @@ const ctx: FallbackContext = {
     { id: "venue", name: "Venue hire", category: "venue", estimated: 42_000, actual: 46_000, paid: 20_000 },
     { id: "food", name: "Catering", category: "catering", estimated: 66_000, actual: null, paid: 0 },
     { id: "decor", name: "Decor", category: "decor", estimated: 28_000, actual: null, paid: 10_000 },
-    { id: "photo", name: "Photography", category: "photography", estimated: 20_000, actual: 18_000, paid: 18_000 },
+    {
+      id: "photo",
+      name: "Photography",
+      category: "photography",
+      estimated: 20_000,
+      actual: 18_000,
+      paid: 18_000,
+    },
     { id: "music", name: "Music", category: "entertainment", estimated: 14_000, actual: null, paid: 0 },
     { id: "buffer", name: "Contingency", category: "other", estimated: 30_000, actual: null, paid: 0 },
   ],
@@ -51,7 +63,10 @@ describe("fallbackConcierge", () => {
 
     const updates = new Map(
       changes
-        .filter((c): c is Extract<ProposedChange, { type: "update_budget_item" }> => c.type === "update_budget_item")
+        .filter(
+          (c): c is Extract<ProposedChange, { type: "update_budget_item" }> =>
+            c.type === "update_budget_item",
+        )
         .map((c) => [c.itemId, c.estimated]),
     );
     // Confirmed lines (with an actual cost) are never touched.
@@ -73,7 +88,9 @@ describe("fallbackConcierge", () => {
 
   it("only updates the total when the plan already fits", () => {
     const { proposal } = fallbackConcierge("Increase the budget to ₹3,00,000", ctx);
-    expect(proposal?.changes).toEqual([expect.objectContaining({ type: "set_event_budget", amount: 300_000 })]);
+    expect(proposal?.changes).toEqual([
+      expect.objectContaining({ type: "set_event_budget", amount: 300_000 }),
+    ]);
   });
 
   it("scales catering with a new guest count", () => {
@@ -92,7 +109,11 @@ describe("fallbackConcierge", () => {
 
   it("produces exact allocations", () => {
     const { proposal } = fallbackConcierge("budget is now 1,59,999", ctx);
-    const preview = previewProposal(proposal!.changes, { budget: ctx.budget, guestCount: 120, items: ctx.items });
+    const preview = previewProposal(proposal!.changes, {
+      budget: ctx.budget,
+      guestCount: 120,
+      items: ctx.items,
+    });
     expect(sumMoney([preview.after.committed])).toBeLessThanOrEqual(159_999);
   });
 });
@@ -148,9 +169,16 @@ describe("normalizeProposal", () => {
 
 describe("parseConciergeResponse", () => {
   it("validates the model's JSON", () => {
-    expect(parseConciergeResponse('{"reply":"Sure","proposal":null}')).toEqual({ reply: "Sure", proposal: null });
+    expect(parseConciergeResponse('{"reply":"Sure","proposal":null}')).toEqual({
+      reply: "Sure",
+      proposal: null,
+    });
     expect(() => parseConciergeResponse("{oops")).toThrow(/malformed/);
     expect(() => parseConciergeResponse('{"reply":"  ","proposal":null}')).toThrow(/empty/);
-    expect(() => parseConciergeResponse('{"reply":"x","proposal":{"title":"t","changes":[{"type":"delete_everything"}]}}')).toThrow();
+    expect(() =>
+      parseConciergeResponse(
+        '{"reply":"x","proposal":{"title":"t","changes":[{"type":"delete_everything"}]}}',
+      ),
+    ).toThrow();
   });
 });

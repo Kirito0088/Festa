@@ -40,7 +40,8 @@ describe("remindersCalendar", () => {
     });
     expect(ics).toContain("SUMMARY:Pick songs\\, games\\; and \\\\ snacks");
     expect(ics).toContain("Line one\\nLine two");
-    for (const line of ics.split("\r\n")) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75);
+    for (const line of ics.split("\r\n"))
+      expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75);
   });
 
   it("returns a valid empty calendar when nothing is dated", () => {

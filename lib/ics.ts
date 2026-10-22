@@ -10,7 +10,10 @@ export function remindersCalendar(input: {
   tasks: readonly { id: string; title: string; due: string; notes: string }[];
   now: Date;
 }): string {
-  const stamp = input.now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const stamp = input.now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -20,7 +23,9 @@ export function remindersCalendar(input: {
     `X-WR-CALNAME:${escapeText(`${input.eventName} reminders`)}`,
   ];
   for (const task of input.tasks) {
-    const description = [task.notes, `From your Festa plan for ${input.eventName}.`].filter(Boolean).join("\n\n");
+    const description = [task.notes, `From your Festa plan for ${input.eventName}.`]
+      .filter(Boolean)
+      .join("\n\n");
     lines.push(
       "BEGIN:VEVENT",
       `UID:${task.id}@festa`,

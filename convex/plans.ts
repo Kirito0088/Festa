@@ -239,7 +239,12 @@ export const saveBlueprint = internalMutation({
         });
       }
       for (const entry of daySchedule(event)) {
-        await ctx.db.insert("scheduleItems", { eventId: event._id, ownerId: event.ownerId, ...entry, source: "plan" });
+        await ctx.db.insert("scheduleItems", {
+          eventId: event._id,
+          ownerId: event.ownerId,
+          ...entry,
+          source: "plan",
+        });
       }
       applied = true;
     }

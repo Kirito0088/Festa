@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { isSafeImageUrl } from "@/lib/inspiration";
-import { deadlineGroup, mergeReorder, resolveTasks, sortTasks, upcomingTasks, type TaskLike } from "@/lib/tasks";
+import {
+  deadlineGroup,
+  mergeReorder,
+  resolveTasks,
+  sortTasks,
+  upcomingTasks,
+  type TaskLike,
+} from "@/lib/tasks";
 
 const task = (overrides: Partial<TaskLike>): TaskLike => ({
   _id: "t",

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { BlueprintValidationError, blueprintSchema, parseBlueprint, type Blueprint } from "@/lib/ai/blueprint";
+import {
+  BlueprintValidationError,
+  blueprintSchema,
+  parseBlueprint,
+  type Blueprint,
+} from "@/lib/ai/blueprint";
 import { estimateTokens, requestStructured, describeFailure } from "@/lib/ai/groq";
 import { toStrictJsonSchema } from "@/lib/ai/json-schema";
 import { blueprintMessages } from "@/lib/ai/prompts";
@@ -39,7 +44,10 @@ describe("parseBlueprint", () => {
 
   it("rejects output that does not match the schema", () => {
     expect(() => parseBlueprint(JSON.stringify({ concept: "a party" }))).toThrow(/schema/);
-    const wrongCategory = { ...validBlueprint(), budget: [{ category: "yachts", label: "x", percent: 10, note: "" }] };
+    const wrongCategory = {
+      ...validBlueprint(),
+      budget: [{ category: "yachts", label: "x", percent: 10, note: "" }],
+    };
     expect(() => parseBlueprint(JSON.stringify(wrongCategory))).toThrow(BlueprintValidationError);
   });
 
@@ -95,7 +103,10 @@ describe("blueprintMessages", () => {
 });
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...headers },
+  });
 }
 
 function chatCompletion(content: string): Response {

@@ -443,6 +443,8 @@ describe("day-of schedule", () => {
     await expect(stranger.as.mutation(api.schedule.remove, { itemId: id })).rejects.toThrow();
 
     await owner.as.mutation(api.schedule.remove, { itemId: id });
-    expect((await owner.as.query(api.schedule.list, { eventId })).some((item) => item._id === id)).toBe(false);
+    expect((await owner.as.query(api.schedule.list, { eventId })).some((item) => item._id === id)).toBe(
+      false,
+    );
   });
 });

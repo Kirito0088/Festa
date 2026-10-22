@@ -37,7 +37,11 @@ describe("daySchedule", () => {
 
   it("starts daytime celebrations in the morning and leaves pre-wedding days out", () => {
     expect(daySchedule({ type: "baby-shower", activities: [], guestCount: 30 })[0].time < "12:00").toBe(true);
-    const wedding = daySchedule({ type: "wedding", activities: ["Mehendi", "Haldi", "Pheras"], guestCount: 100 });
+    const wedding = daySchedule({
+      type: "wedding",
+      activities: ["Mehendi", "Haldi", "Pheras"],
+      guestCount: 100,
+    });
     expect(wedding.some((item) => item.title === "Mehendi" || item.title === "Haldi")).toBe(false);
   });
 });
