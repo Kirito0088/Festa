@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "NEXT_PUBLIC_CONVEX_URL=https://dynamic-hawk-395.convex.cloud NEXT_PUBLIC_CONVEX_SITE_URL=https://dynamic-hawk-395.convex.site npm run build"
+  "buildCommand": "NEXT_PUBLIC_CONVEX_URL=https://dynamic-hawk-395.convex.cloud NEXT_PUBLIC_CONVEX_SITE_URL=https://dynamic-hawk-395.convex.site npm run build",
+  "regions": ["bom1"]
 }
