@@ -71,6 +71,7 @@ export function SignInForm() {
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
+    const fromDemo = me?.isDemo === true;
     try {
       await signIn("password", {
         email: values.email,
@@ -78,6 +79,9 @@ export function SignInForm() {
         flow,
         ...(flow === "signUp" && values.name ? { name: values.name } : {}),
       });
+      // Switching straight from a demo session keeps the open client on the
+      // demo identity, so load the next page fresh with the new account.
+      if (fromDemo) window.location.assign(next);
     } catch (error) {
       setFormError(friendlyAuthError(error, flow));
     }

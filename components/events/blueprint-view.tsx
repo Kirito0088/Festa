@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import { useMutation } from "convex/react";
 import { Cpu, Lightbulb, Loader2, RefreshCw, ShieldAlert, Sparkles, Wand2 } from "lucide-react";
 import { useState } from "react";
@@ -18,7 +19,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
-import { currentIsoDate } from "@/hooks/use-today";
+import { currentIsoDate, useToday } from "@/hooks/use-today";
 import { CATEGORY_LABELS } from "@/lib/constants";
 import { formatIsoDate, shiftIsoDate } from "@/lib/dates";
 import { errorMessage } from "@/lib/errors";
@@ -26,6 +27,7 @@ import { useEventContext } from "./event-context";
 
 export function BlueprintView() {
   const { event, blueprint } = useEventContext();
+  const today = useToday();
   const regenerate = useMutation(api.plans.regenerate);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -215,17 +217,27 @@ export function BlueprintView() {
           description="Suggestions only — Festa doesn't recommend specific businesses."
         >
           <ul className="divide-y divide-border">
-            {content.vendors.map((vendor) => (
-              <li key={vendor.title} className="py-3 first:pt-0 last:pb-0">
-                <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-[0.9375rem] font-medium">{vendor.title}</span>
-                  <span className="tabular shrink-0 text-[0.75rem] text-muted-foreground">
-                    Book by {formatIsoDate(shiftIsoDate(event.date, -vendor.bookByDaysBefore), "short")}
-                  </span>
-                </div>
-                {vendor.why && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{vendor.why}</p>}
-              </li>
-            ))}
+            {content.vendors.map((vendor) => {
+              const bookBy = shiftIsoDate(event.date, -vendor.bookByDaysBefore);
+              // The suggested lead time can exceed the time left before the event.
+              const late = today !== null && bookBy < today;
+              return (
+                <li key={vendor.title} className="py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-[0.9375rem] font-medium">{vendor.title}</span>
+                    <span
+                      className={cn(
+                        "tabular shrink-0 text-[0.75rem]",
+                        late ? "font-medium text-danger" : "text-muted-foreground",
+                      )}
+                    >
+                      {late ? "Book as soon as you can" : `Book by ${formatIsoDate(bookBy, "short")}`}
+                    </span>
+                  </div>
+                  {vendor.why && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{vendor.why}</p>}
+                </li>
+              );
+            })}
           </ul>
         </Panel>
       </div>

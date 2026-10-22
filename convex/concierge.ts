@@ -162,7 +162,7 @@ export const getContext = internalQuery({
       )
       .slice(0, 8)
       .reverse()
-      .map((m) => ({ role: m.role, content: m.content.slice(0, 1200) }));
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 1200) + proposalOutcome(m.proposal) }));
 
     return {
       ownerId: event.ownerId,
@@ -195,6 +195,16 @@ export const getContext = internalQuery({
     };
   },
 });
+
+/** Tells the model what became of an earlier proposal, so it never assumes one was applied. */
+function proposalOutcome(proposal: Doc<"conciergeMessages">["proposal"]): string {
+  if (!proposal) return "";
+  if (proposal.status === "applied") {
+    return `\n[Host applied ${proposal.appliedCount ?? proposal.changes.length} of ${proposal.changes.length} proposed changes.]`;
+  }
+  if (proposal.status === "dismissed") return "\n[Host dismissed this proposal. Nothing was changed.]";
+  return "\n[Proposal not yet approved. Nothing has changed.]";
+}
 
 function offlineNotice(failure: GroqFailure | "quota"): string {
   if (failure === "quota") return "You've reached the hourly AI limit, so the offline assistant answered.";
