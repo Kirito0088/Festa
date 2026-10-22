@@ -71,6 +71,7 @@ export const consumeAiQuota = internalMutation({
     ] as const;
 
     if (!(await rateLimiter.check(ctx, perUser, { key: args.userId })).ok) return "user_limit";
+    if (!(await rateLimiter.check(ctx, "aiCooldown")).ok) return "busy";
     for (const { name, count } of shared) {
       if (!(await rateLimiter.check(ctx, name, { count })).ok) return "busy";
     }
@@ -81,15 +82,15 @@ export const consumeAiQuota = internalMutation({
 });
 
 /**
- * Called after Groq answers 429: spends a full minute of the shared token
- * budget in advance, so every user goes straight to the built-in planner
- * instead of each waiting on a refusal.
+ * Called after Groq answers 429: starts a one-minute cooldown, so every user
+ * goes straight to the built-in planner instead of each waiting on a
+ * refusal. A 429 during the cooldown leaves it as it is.
  */
 export const pauseAi = internalMutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    await rateLimiter.limit(ctx, "aiTokensPerMinute", { count: AI_TOKENS_PER_MINUTE, reserve: true });
+    await rateLimiter.limit(ctx, "aiCooldown");
     return null;
   },
 });

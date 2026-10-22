@@ -2,6 +2,7 @@
 import rateLimiter from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LIMITS } from "../lib/constants";
 import { sumMoney } from "../lib/money";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -378,17 +379,17 @@ describe("rate limits", () => {
     }
   });
 
-  it("pauses every AI call for about a minute after Groq refuses", async () => {
+  it("pauses every AI call for a minute after Groq refuses, however many refusals arrive", async () => {
     const t = setup();
     const { userId } = await createUser(t);
-    await t.mutation(internal.plans.pauseAi, {});
-    expect(await t.mutation(internal.plans.consumeAiQuota, { userId, kind: "concierge", tokens: 500 })).toBe(
-      "busy",
-    );
-    vi.advanceTimersByTime(2 * 60_000);
-    expect(await t.mutation(internal.plans.consumeAiQuota, { userId, kind: "concierge", tokens: 500 })).toBe(
-      "ok",
-    );
+    const quota = () => t.mutation(internal.plans.consumeAiQuota, { userId, kind: "concierge", tokens: 500 });
+    // Several in-flight calls can all come back 429 together.
+    for (let i = 0; i < 4; i++) await t.mutation(internal.plans.pauseAi, {});
+    expect(await quota()).toBe("busy");
+    vi.advanceTimersByTime(30_000);
+    expect(await quota()).toBe("busy");
+    vi.advanceTimersByTime(31_000);
+    expect(await quota()).toBe("ok");
   });
 
   it("slows down a user who creates records too quickly", async () => {
@@ -446,5 +447,28 @@ describe("day-of schedule", () => {
     expect((await owner.as.query(api.schedule.list, { eventId })).some((item) => item._id === id)).toBe(
       false,
     );
+  });
+
+  it("caps the run sheet at what the list can show", async () => {
+    const t = setup();
+    const owner = await createUser(t);
+    const eventId = await createEvent(owner, t);
+    const drafted = (await owner.as.query(api.schedule.list, { eventId })).length;
+    await t.run(async (ctx) => {
+      for (let i = drafted; i < LIMITS.scheduleMax; i++) {
+        await ctx.db.insert("scheduleItems", {
+          eventId,
+          ownerId: owner.userId,
+          time: "12:00",
+          title: `Moment ${i}`,
+          notes: "",
+          source: "user",
+        });
+      }
+    });
+    await expect(
+      owner.as.mutation(api.schedule.create, { eventId, time: "23:00", title: "One more", notes: "" }),
+    ).rejects.toThrow(/holds up to/);
+    expect(await owner.as.query(api.schedule.list, { eventId })).toHaveLength(LIMITS.scheduleMax);
   });
 });

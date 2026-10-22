@@ -25,6 +25,9 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   },
   aiRequestsPerDay: { kind: "fixed window", rate: 900, period: DAY },
   aiTokensPerDay: { kind: "fixed window", rate: 180_000, period: DAY },
+  // One token, spent when Groq answers 429. It refills after a minute, and
+  // further 429s in that minute find it already spent, so pauses never stack.
+  aiCooldown: { kind: "token bucket", rate: 1, period: MINUTE, capacity: 1 },
   createEventPerUser: { kind: "token bucket", rate: 20, period: HOUR, capacity: 5 },
   demoSeedPerUser: { kind: "token bucket", rate: 3, period: HOUR, capacity: 2 },
   // Every new anonymous session gets fresh per-user buckets, so demos also

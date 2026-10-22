@@ -70,7 +70,8 @@ export function ScheduleDialog({
         <DialogHeader>
           <DialogTitle>{item ? "Edit this moment" : "Add to the day"}</DialogTitle>
           <DialogDescription>
-            Times use the 24-hour clock. Anything after midnight stays at the end.
+            Times use the 24-hour clock. Anything from midnight to 5 a.m. counts as the same night and goes at
+            the end.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} noValidate className="grid gap-5">

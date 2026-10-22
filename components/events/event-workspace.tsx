@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RECENT_ACTIVITY_LIMIT } from "@/lib/constants";
 import { EventProvider } from "./event-context";
-import { EventHeader } from "./event-header";
+import { EventHeader, loadSettingsDialog } from "./event-header";
 import { EventNav } from "./event-nav";
 
 /**
@@ -64,7 +64,7 @@ function WarmSections({ eventId }: { eventId: string }) {
 
   // Fetch the lazily loaded settings form once the page is idle.
   useEffect(() => {
-    const preload = () => void import("./event-settings-dialog");
+    const preload = () => void loadSettingsDialog();
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(preload, { timeout: 3000 });
       return () => window.cancelIdleCallback(id);

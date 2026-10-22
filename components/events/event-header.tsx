@@ -38,7 +38,7 @@ import { errorMessage } from "@/lib/errors";
 import { googleCalendarUrl, googleMapsSearchUrl } from "@/lib/google";
 import { useEventContext } from "./event-context";
 
-const loadSettingsDialog = () => import("./event-settings-dialog");
+export const loadSettingsDialog = () => import("./event-settings-dialog");
 const EventSettingsDialog = lazy(() =>
   loadSettingsDialog().then((module) => ({ default: module.EventSettingsDialog })),
 );

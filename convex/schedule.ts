@@ -22,7 +22,7 @@ export const list = query({
     const items = await ctx.db
       .query("scheduleItems")
       .withIndex("by_eventId_and_time", (q) => q.eq("eventId", args.eventId))
-      .take(LIMITS.listMax);
+      .take(LIMITS.scheduleMax);
     return items.toSorted((a, b) => scheduleSortKey(a.time).localeCompare(scheduleSortKey(b.time)));
   },
 });
@@ -33,6 +33,14 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const { userId, event } = await requireOwnedEvent(ctx, args.eventId);
     await limitWrites(ctx, userId);
+    // `list` returns at most this many, so a longer sheet would hide its latest moments.
+    const existing = await ctx.db
+      .query("scheduleItems")
+      .withIndex("by_eventId_and_time", (q) => q.eq("eventId", event._id))
+      .take(LIMITS.scheduleMax);
+    if (existing.length >= LIMITS.scheduleMax) {
+      throw invalid(`The day's schedule holds up to ${LIMITS.scheduleMax} moments. Remove one first.`);
+    }
     const title = cleanText(args.title, "Title", LIMITS.nameMax, true);
     const id = await ctx.db.insert("scheduleItems", {
       eventId: event._id,

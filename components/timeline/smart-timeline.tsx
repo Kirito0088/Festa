@@ -123,7 +123,9 @@ export function SmartTimeline() {
   }, [visible, sort, today]);
 
   const doneCount = resolved?.filter((task) => task.completed).length ?? 0;
-  const remindable = resolved?.filter((task) => !task.completed && task.due) ?? [];
+  // Overdue tasks are left out: their alerts would already be in the past.
+  const remindable =
+    resolved?.filter((task) => !task.completed && task.due && task.state !== "overdue") ?? [];
 
   // Every open, dated task as one calendar file, with an alert the evening before each.
   function downloadReminders() {
@@ -146,8 +148,11 @@ export function SmartTimeline() {
         .replace(/^-+|-+$/g, "")
         .toLowerCase() || "festa"
     }-reminders.ics`;
+    // Safari and Firefox need the link in the page, and the URL alive until the download starts.
+    document.body.append(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast.success(`${remindable.length} reminders ready to import into your calendar.`);
   }
 

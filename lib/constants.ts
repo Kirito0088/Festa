@@ -170,4 +170,6 @@ export const LIMITS = {
   moneyMax: 10_000_000_000,
   offsetDaysMax: 730,
   listMax: 500,
+  /** Moments on one day's run sheet. */
+  scheduleMax: 100,
 } as const;

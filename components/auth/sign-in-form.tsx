@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Field, fieldAria } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
+import { safeNext } from "@/lib/site";
 
 const schema = z.object({
   name: z.string().trim().max(80, "Keep your name under 80 characters."),
@@ -23,12 +24,6 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 type Flow = "signIn" | "signUp";
-
-function safeNext(value: string | null): string {
-  // Only allow same-site relative paths to avoid open redirects.
-  if (value && value.startsWith("/") && !value.startsWith("//")) return value;
-  return "/events";
-}
 
 function friendlyAuthError(error: unknown, flow: Flow): string {
   const text = error instanceof Error ? error.message : "";
