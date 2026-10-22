@@ -19,6 +19,7 @@ import { lazy, Suspense, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
+import { Bunting } from "@/components/ui/bunting";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -28,7 +29,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CountdownStamp } from "@/components/ui/stamp";
 import { currentIsoDate, useToday } from "@/hooks/use-today";
+import { inkFromPalette } from "@/lib/color";
 import { EVENT_TYPE_LABELS } from "@/lib/constants";
 import { countdownTo, formatIsoDate } from "@/lib/dates";
 import { errorMessage } from "@/lib/errors";
@@ -41,7 +44,7 @@ const EventSettingsDialog = lazy(() =>
 );
 
 export function EventHeader() {
-  const { event } = useEventContext();
+  const { event, blueprint } = useEventContext();
   const today = useToday();
   const router = useRouter();
   const removeEvent = useMutation(api.events.remove);
@@ -54,43 +57,58 @@ export function EventHeader() {
 
   const countdown = today ? countdownTo(event.date, today) : null;
   const place = [event.venue, event.city].filter(Boolean).join(", ");
+  const palette = blueprint?.content.palette.slice(0, 5).map((swatch) => swatch.hex) ?? [];
 
   return (
-    <header className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6 sm:pt-8">
+    <header className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+      <Bunting colors={palette} flags={12} className="-mt-px sm:hidden" />
+      <Bunting colors={palette} flags={30} className="-mt-px hidden sm:block" />
       <Link
         href="/events"
-        className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground"
+        className="mt-3 inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" aria-hidden="true" /> All celebrations
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-x-6 gap-y-4 pb-6">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="type-eyebrow">{EVENT_TYPE_LABELS[event.type]}</p>
-            {event.isDemo && <Badge variant="secondary">Sample data</Badge>}
-          </div>
-          <h1 className="type-display mt-2 text-[2.5rem] break-words sm:text-[3.5rem]">{event.name}</h1>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.875rem] text-muted-foreground">
-            <span className="font-medium text-foreground">{formatIsoDate(event.date, "weekday")}</span>
-            {countdown && (
-              <span className="tabular">
-                {countdown.isToday
-                  ? "Today"
-                  : countdown.isPast
-                    ? `${Math.abs(countdown.days)} days ago`
-                    : `${countdown.days} days to go`}
-              </span>
-            )}
-            {place && (
+        <div className="flex min-w-0 items-start gap-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="type-eyebrow">{EVENT_TYPE_LABELS[event.type]}</p>
+              {event.isDemo && <Badge variant="secondary">Sample data</Badge>}
+            </div>
+            <h1 className="type-display mt-2 text-[2.5rem] break-words sm:text-[3.5rem]">{event.name}</h1>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.875rem] text-muted-foreground">
+              <span className="font-medium text-foreground">{formatIsoDate(event.date, "invitation")}</span>
+              {/* The stamp carries the countdown from md up. */}
+              {countdown && (
+                <span className="tabular md:hidden">
+                  {countdown.isToday
+                    ? "Today"
+                    : countdown.isPast
+                      ? `${Math.abs(countdown.days)} days ago`
+                      : `${countdown.days} days to go`}
+                </span>
+              )}
+              {place && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="size-3.5" aria-hidden="true" /> {place}
+                </span>
+              )}
               <span className="inline-flex items-center gap-1">
-                <MapPin className="size-3.5" aria-hidden="true" /> {place}
+                <Users className="size-3.5" aria-hidden="true" /> {event.guestCount} guests
               </span>
-            )}
-            <span className="inline-flex items-center gap-1">
-              <Users className="size-3.5" aria-hidden="true" /> {event.guestCount} guests
-            </span>
+            </div>
           </div>
+          {countdown && (
+            <CountdownStamp
+              color={inkFromPalette(palette)}
+              days={countdown.days}
+              isToday={countdown.isToday}
+              isPast={countdown.isPast}
+              className="mt-1 hidden md:grid"
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-2">

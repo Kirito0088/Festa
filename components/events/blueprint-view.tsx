@@ -109,8 +109,8 @@ export function BlueprintView() {
       <>
         <EmptyState
           icon={Wand2}
-          title="No blueprint yet"
-          description="Generate a concept, palette, budget split, checklist and vendor plan for this celebration."
+          title="No plan drafted yet"
+          description="Festa can sketch one from your answers: a concept and palette, a budget split, and the tasks and vendors to get there."
           action={
             <Button size="lg" onClick={() => setDialogOpen(true)}>
               <Sparkles aria-hidden="true" /> Generate blueprint

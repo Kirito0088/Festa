@@ -135,8 +135,8 @@ export function BudgetStudio() {
       {items.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title="No budget lines yet"
-          description="Add lines for the venue, food, decor and anything else you'll pay for. Festa keeps the totals."
+          title="Start with the big costs"
+          description="Add the venue and the food first; they're usually the biggest lines. Festa keeps the totals as you go."
           action={
             <Button onClick={openNew}>
               <Plus aria-hidden="true" /> Add a budget line

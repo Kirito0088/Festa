@@ -7,6 +7,7 @@ import { CalendarPlus, GripVertical, MoreHorizontal, Pencil, Trash2 } from "luci
 import { motion } from "motion/react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { useConfetti } from "@/components/ui/confetti";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,13 +38,18 @@ function CheckCircle({
   onToggle: () => void;
   label: string;
 }) {
+  const celebrate = useConfetti();
   return (
     <button
       type="button"
       role="checkbox"
       aria-checked={checked}
       aria-label={label}
-      onClick={onToggle}
+      onClick={(event) => {
+        // A little celebration for finishing something, not for reopening it.
+        if (!checked) celebrate(event.currentTarget);
+        onToggle();
+      }}
       className="relative grid size-6 shrink-0 cursor-pointer place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <motion.span
@@ -102,7 +108,7 @@ export function TaskRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "group relative flex items-center gap-3 bg-card px-4 py-3.5 sm:px-5",
+        "group relative flex items-center gap-3 bg-card px-4 py-3.5 first:rounded-t-[var(--radius-2xl)] last:rounded-b-[var(--radius-2xl)] sm:px-5",
         isDragging && "z-10 rounded-2xl shadow-[var(--shadow-lifted)] ring-1 ring-foreground/8",
       )}
     >

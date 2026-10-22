@@ -96,8 +96,8 @@ export function InspirationBoard() {
       ) : visible.length === 0 ? (
         <EmptyState
           icon={Images}
-          title={items.length === 0 ? "Your board is empty" : "Nothing in this category yet"}
-          description="Start with Festa's curated library, paste an image link, or save a colour from your palette."
+          title={items.length === 0 ? "Pin what catches your eye" : "Nothing in this category yet"}
+          description="Pick from Festa's library, paste a link to an image you love, or save a colour straight from your palette."
           action={
             <Button onClick={() => setAdding(true)}>
               <Plus aria-hidden="true" /> Add inspiration

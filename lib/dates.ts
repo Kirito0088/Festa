@@ -32,10 +32,14 @@ export function daysBetween(from: string, to: string): number {
   return differenceInCalendarDays(parseIsoDate(to), parseIsoDate(from));
 }
 
-export function formatIsoDate(value: string, pattern: "long" | "short" | "weekday" = "long"): string {
+export function formatIsoDate(
+  value: string,
+  pattern: "long" | "short" | "weekday" | "invitation" = "long",
+): string {
   const date = parseIsoDate(value);
   if (pattern === "short") return format(date, "d MMM");
   if (pattern === "weekday") return format(date, "EEE, d MMM yyyy");
+  if (pattern === "invitation") return format(date, "EEEE, d MMMM yyyy");
   return format(date, "d MMMM yyyy");
 }
 

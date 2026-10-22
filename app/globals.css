@@ -4,14 +4,14 @@
 
 /*
  * Festa design tokens.
- * Brand: warm ivory, charcoal, sage, blush and sand. Semantic tokens map the
- * brand onto roles (surface, text, border, status) so components never
- * reference raw hex values.
+ * Brand: stationery. Paper (ivory), fountain-pen ink, marigold, sage, blush
+ * and sand. Semantic tokens map the brand onto roles (surface, text, border,
+ * status) so components never reference raw hex values.
  */
 
 @theme inline {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
   --font-heading: var(--font-instrument-serif), ui-serif, Georgia, serif;
 
@@ -36,6 +36,10 @@
 
   --color-ivory: var(--ivory);
   --color-charcoal: var(--charcoal);
+  --color-ink: var(--ink);
+  --color-marigold: var(--marigold);
+  --color-marigold-strong: var(--marigold-strong);
+  --color-marigold-soft: var(--marigold-soft);
   --color-sage: var(--sage);
   --color-sage-strong: var(--sage-strong);
   --color-sage-soft: var(--sage-soft);
@@ -77,6 +81,12 @@
   /* Brand */
   --ivory: #f8f6f1;
   --charcoal: #20211f;
+  /* Fountain-pen ink: text and primary actions. 13:1 on ivory. */
+  --ink: #262a47;
+  /* Marigold fills celebration moments; the strong shade is for text (5.7:1). */
+  --marigold: #e6a23c;
+  --marigold-strong: #8a5a12;
+  --marigold-soft: #fbecd2;
   --sage: #a7b5a0;
   --sage-strong: #56694f;
   --sage-soft: #e6ebe2;
@@ -89,19 +99,19 @@
 
   /* Surfaces and text */
   --background: var(--ivory);
-  --foreground: var(--charcoal);
+  --foreground: var(--ink);
   --card: #fffefb;
-  --card-foreground: var(--charcoal);
+  --card-foreground: var(--ink);
   --popover: #fffefb;
-  --popover-foreground: var(--charcoal);
-  --primary: var(--charcoal);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
   --primary-foreground: var(--ivory);
   --secondary: #efebe3;
-  --secondary-foreground: var(--charcoal);
+  --secondary-foreground: var(--ink);
   --muted: #efebe3;
-  --muted-foreground: #66655e;
+  --muted-foreground: #64635f;
   --accent: var(--sage-soft);
-  --accent-foreground: var(--charcoal);
+  --accent-foreground: var(--ink);
   --border: #e5dfd4;
   --input: #dad3c6;
   --ring: #6f8268;
@@ -135,6 +145,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "cv11";
+    /* A faint card-stock grain, so the page reads as paper rather than a flat fill. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .15 0 0 0 0 .14 0 0 0 0 .12 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   ::selection {
     background: var(--blush);
@@ -172,13 +184,13 @@
     line-height: 1.1;
     letter-spacing: -0.01em;
   }
-  /* Small uppercase labels get positive tracking for legibility. */
+  /* Small labels read like a note in the margin: serif italic, sentence case. */
   .type-eyebrow {
-    font-size: 0.6875rem;
-    line-height: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 0.9375rem;
+    line-height: 1.2;
+    font-weight: 400;
     color: var(--muted-foreground);
   }
   .tabular {

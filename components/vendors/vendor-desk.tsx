@@ -10,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useEventContext } from "@/components/events/event-context";
 import { Badge } from "@/components/ui/badge";
+import { useConfetti } from "@/components/ui/confetti";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,7 +43,8 @@ const STATUS_TONE: Record<VendorStatus, string> = {
   researching: "bg-secondary text-muted-foreground",
   contacted: "bg-sand-soft text-sand-strong",
   quoted: "bg-[#eef1ea] text-sage-strong",
-  booked: "bg-sage-strong text-ivory",
+  // Booked reads as an ink stamp on the card.
+  booked: "-rotate-[3deg] border-[1.5px] border-current bg-sage-soft/60 font-semibold text-sage-strong",
   declined: "bg-blush-soft text-blush-strong",
 };
 
@@ -65,6 +67,7 @@ export function VendorDesk() {
   const vendors = useQuery(api.vendors.list, { eventId: event._id });
   const removeVendor = useMutation(api.vendors.remove);
   const updateVendor = useMutation(api.vendors.update);
+  const celebrate = useConfetti();
 
   const [category, setCategory] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
@@ -216,8 +219,8 @@ export function VendorDesk() {
       ) : vendors.length === 0 ? (
         <EmptyState
           icon={Store}
-          title="No vendors yet"
-          description="Add the venues, caterers and artists you're considering. Compare quotes and track bookings in one place."
+          title="Who are you talking to?"
+          description="Add the caterer, decorator or band you're considering. Quotes sit side by side, so comparing two of them takes seconds."
           action={
             <Button onClick={() => openVendor(null)}>
               <Plus aria-hidden="true" /> Add a vendor
@@ -266,6 +269,8 @@ export function VendorDesk() {
                           onSelect={async () => {
                             try {
                               await updateVendor({ vendorId: vendor._id, status: "booked" });
+                              const stamp = document.getElementById(`vendor-status-${vendor._id}`);
+                              if (stamp) celebrate(stamp);
                               toast.success(`${vendor.name} marked as booked.`);
                             } catch (error) {
                               toast.error(errorMessage(error));
@@ -289,6 +294,7 @@ export function VendorDesk() {
                       "inline-flex h-6 items-center rounded-full px-2.5 text-[0.75rem] font-medium",
                       STATUS_TONE[vendor.status],
                     )}
+                    id={`vendor-status-${vendor._id}`}
                   >
                     {VENDOR_STATUS_LABELS[vendor.status]}
                   </span>

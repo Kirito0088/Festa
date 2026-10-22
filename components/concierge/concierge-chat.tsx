@@ -10,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useEventContext } from "@/components/events/event-context";
 import { Button } from "@/components/ui/button";
+import { CircledIcon } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { currentIsoDate } from "@/hooks/use-today";
@@ -87,8 +88,8 @@ export function ConciergeChat() {
         <div>
           <h2 className="type-title text-[2rem]">Concierge</h2>
           <p className="mt-1 max-w-xl text-[0.875rem] text-muted-foreground">
-            Ask for changes in plain words. The concierge reads your saved plan, explains the trade-offs and
-            proposes edits — nothing changes until you approve.
+            Tell it what changed, the way you&rsquo;d tell a planner. It reads your plan, suggests edits and
+            says why. Nothing changes until you say yes.
           </p>
         </div>
         {messages && messages.length > 0 && (
@@ -107,9 +108,7 @@ export function ConciergeChat() {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <span className="grid size-12 place-items-center rounded-full bg-sage-soft text-sage-strong">
-              <MessagesSquare className="size-5" aria-hidden="true" />
-            </span>
+            <CircledIcon icon={MessagesSquare} />
             <p className="type-title mt-5 text-2xl">How can I help with {event.name}?</p>
             <p className="mt-2 max-w-sm text-[0.875rem] text-muted-foreground">
               Try one of these, or write your own.

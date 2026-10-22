@@ -4,6 +4,7 @@ import {
   countdownTo,
   deadlineState,
   describeOffset,
+  formatIsoDate,
   isIsoDate,
   resolveDueDate,
   shiftIsoDate,
@@ -97,5 +98,14 @@ describe("Google links", () => {
     expect(googleMapsSearchUrl("Heritage property, Jaipur")).toBe(
       "https://www.google.com/maps/search/?api=1&query=Heritage+property%2C+Jaipur",
     );
+  });
+});
+
+describe("formatIsoDate", () => {
+  it("formats each pattern", () => {
+    expect(formatIsoDate("2027-01-05")).toBe("5 January 2027");
+    expect(formatIsoDate("2027-01-05", "short")).toBe("5 Jan");
+    expect(formatIsoDate("2027-01-05", "weekday")).toBe("Tue, 5 Jan 2027");
+    expect(formatIsoDate("2027-01-05", "invitation")).toBe("Tuesday, 5 January 2027");
   });
 });

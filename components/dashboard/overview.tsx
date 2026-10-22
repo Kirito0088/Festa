@@ -28,8 +28,9 @@ import { Stat } from "@/components/ui/stat";
 import { useToday } from "@/hooks/use-today";
 import { summarizeBudget } from "@/lib/budget";
 import { RECENT_ACTIVITY_LIMIT, VENDOR_STATUSES, VENDOR_STATUS_LABELS } from "@/lib/constants";
-import { countdownTo, formatIsoDate } from "@/lib/dates";
+import { countdownTo } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
+import { planNote } from "@/lib/plan-note";
 import { resolveTasks, upcomingTasks } from "@/lib/tasks";
 
 const ACTIVITY_ICONS: Record<Doc<"activity">["kind"], LucideIcon> = {
@@ -69,36 +70,30 @@ export function Overview() {
   const doneCount = resolved?.filter((task) => task.completed).length ?? 0;
   const overdueCount = resolved?.filter((task) => task.state === "overdue").length ?? 0;
   const upcoming = resolved ? upcomingTasks(resolved, 5) : [];
+  const note =
+    countdown && resolved && budget
+      ? planNote({
+          countdown,
+          overdue: overdueCount,
+          dueSoon: resolved.filter((task) => task.state === "today" || task.state === "soon").length,
+          openTasks: resolved.length - doneCount,
+          budget,
+          currency: event.currency,
+        })
+      : null;
   const booked = vendors?.filter((vendor) => vendor.status === "booked").length ?? 0;
   const activeVendors = vendors?.filter((vendor) => vendor.status !== "declined") ?? [];
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-      {/* Countdown */}
+      {/* A note on where things stand; the header stamp carries the countdown itself. */}
       <Panel className="lg:col-span-5" bodyClassName="flex flex-col">
-        <p className="type-eyebrow">Countdown</p>
-        {countdown ? (
-          <div className="mt-3 flex items-end gap-3">
-            <span className="type-display tabular text-[5.5rem] leading-[0.85]">
-              {countdown.isPast ? "✓" : countdown.days}
-            </span>
-            <span className="pb-2 text-[0.9375rem] text-muted-foreground">
-              {countdown.isToday
-                ? "It's today!"
-                : countdown.isPast
-                  ? "Celebrated"
-                  : countdown.days === 1
-                    ? "day to go"
-                    : "days to go"}
-            </span>
-          </div>
+        {note ? (
+          <p className="type-title text-[1.625rem] leading-[1.25]">{note.join(" ")}</p>
         ) : (
-          <Skeleton className="mt-3 h-20 w-40" />
+          <Skeleton className="h-24" />
         )}
-        <p className="mt-3 text-[0.875rem] text-muted-foreground">
-          {formatIsoDate(event.date, "weekday")}
-          {countdown && !countdown.isPast && countdown.weeks > 1 ? ` · about ${countdown.weeks} weeks` : ""}
-        </p>
+        <p className="type-eyebrow mt-3">Festa, keeping an eye on things</p>
         {blueprint && (
           <Link
             href={`${base}/plan`}

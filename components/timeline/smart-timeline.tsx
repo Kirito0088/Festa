@@ -238,8 +238,8 @@ export function SmartTimeline() {
       ) : resolved.length === 0 ? (
         <EmptyState
           icon={CalendarCheck2}
-          title="No tasks yet"
-          description="Add your first task, or generate a blueprint to get a full checklist with deadlines."
+          title="Your checklist is empty"
+          description="Add a task, or draft a blueprint and Festa writes the checklist for you, each date counted back from the day itself."
           action={
             <Button onClick={() => openTask(null)}>
               <Plus aria-hidden="true" /> Add a task
@@ -260,7 +260,7 @@ export function SmartTimeline() {
               >
                 {DEADLINE_GROUP_LABELS[group]} · {groupTasks.length}
               </h3>
-              <ul className="surface divide-y divide-border overflow-hidden">{groupTasks.map(renderRow)}</ul>
+              <ul className="surface divide-y divide-border">{groupTasks.map(renderRow)}</ul>
             </section>
           ))}
         </div>

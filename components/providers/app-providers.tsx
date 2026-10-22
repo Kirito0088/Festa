@@ -4,6 +4,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
+import { ConfettiProvider } from "@/components/ui/confetti";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { spring } from "@/lib/motion";
@@ -20,7 +21,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <ConvexAuthProvider client={convex}>
       <MotionConfig reducedMotion="user" transition={spring.default}>
         <TooltipProvider delayDuration={300}>
-          {children}
+          <ConfettiProvider>{children}</ConfettiProvider>
           <Toaster />
         </TooltipProvider>
       </MotionConfig>
