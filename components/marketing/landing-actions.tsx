@@ -1,7 +1,6 @@
 "use client";
 
 import { useConvexAuth, useQuery } from "convex/react";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/convex/_generated/api";
 import { DemoButton } from "@/components/auth/demo-button";
@@ -15,9 +14,7 @@ export function HeaderActions() {
   if (!isLoading && isAuthenticated && me && !me.isDemo) {
     return (
       <Button asChild size="sm">
-        <Link href="/events">
-          Open Festa <ArrowRight aria-hidden="true" />
-        </Link>
+        <Link href="/events">Open Festa</Link>
       </Button>
     );
   }
@@ -37,11 +34,21 @@ export function HeroActions() {
   return (
     <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
       <Button asChild size="lg">
-        <Link href="/sign-in?mode=sign-up">
-          Start planning <ArrowRight aria-hidden="true" />
-        </Link>
+        <Link href="/sign-in?mode=sign-up">Start planning</Link>
       </Button>
       <DemoButton />
+    </div>
+  );
+}
+
+/** The same two actions at a size that sits side by side on a phone. */
+export function CompactActions() {
+  return (
+    <div className="flex flex-wrap items-center gap-2.5">
+      <Button asChild>
+        <Link href="/sign-in?mode=sign-up">Start planning</Link>
+      </Button>
+      <DemoButton size="default" />
     </div>
   );
 }

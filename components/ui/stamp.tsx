@@ -35,24 +35,31 @@ export function CountdownStamp({
   days,
   isToday,
   isPast,
+  size = "md",
   className,
 }: {
   color: string;
   days: number;
   isToday: boolean;
   isPast: boolean;
+  size?: "sm" | "md";
   className?: string;
 }) {
+  const small = size === "sm";
   return (
-    <Stamp color={color} className={className}>
+    <Stamp color={color} className={cn(small && "size-[4.25rem]", className)}>
       {isToday ? (
         <span className="type-title text-[1.375rem]">Today!</span>
       ) : isPast ? (
         <span className="type-title text-[1.125rem] italic">Celebrated</span>
       ) : (
         <>
-          <span className="type-display tabular text-[1.75rem]">{days}</span>
-          <span className="text-[0.6875rem] font-medium">{days === 1 ? "day to go" : "days to go"}</span>
+          <span className={cn("type-display tabular", small ? "text-[1.375rem]" : "text-[1.75rem]")}>
+            {days}
+          </span>
+          <span className={cn("font-medium", small ? "text-[0.625rem]" : "text-[0.6875rem]")}>
+            {days === 1 ? "day to go" : "days to go"}
+          </span>
         </>
       )}
     </Stamp>
