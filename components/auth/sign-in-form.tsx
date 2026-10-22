@@ -47,12 +47,17 @@ function friendlyAuthError(error: unknown, flow: Flow): string {
 export function SignInForm() {
   const { signIn } = useAuthActions();
   const { isAuthenticated } = useConvexAuth();
-  const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
+  // Subscribed while signed out too (it answers null): the socket opens with
+  // the page rather than on submit, and the signed-in answer arrives in the
+  // same round trip that confirms the new session.
+  const me = useQuery(api.users.me);
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
   const [flow, setFlow] = useState<Flow>(searchParams.get("mode") === "sign-up" ? "signUp" : "signIn");
   const [formError, setFormError] = useState<string | null>(null);
+  // Signed in and on the way to the next page: stay busy until it replaces this one.
+  const [leaving, setLeaving] = useState(false);
 
   const {
     register,
@@ -65,20 +70,31 @@ export function SignInForm() {
 
   // Account holders go straight to their plans. Demo sessions stay here so
   // the demo button can finish seeding, or so they can create an account.
+  // `me` alone can be stale: Next keeps this page's state while it's hidden,
+  // so on return after signing out it still holds the last account until
+  // the fresh answer lands. The confirmed session can't be.
   useEffect(() => {
-    if (me && !me.isDemo) router.replace(next);
-  }, [me, next, router]);
+    if (isAuthenticated && me && !me.isDemo) router.replace(next);
+  }, [isAuthenticated, me, next, router]);
+
+  useEffect(() => {
+    router.prefetch(next);
+    // Hidden once the next page shows; come back to a ready form.
+    return () => setLeaving(false);
+  }, [next, router]);
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     const fromDemo = me?.isDemo === true;
     try {
-      await signIn("password", {
+      const { signingIn } = await signIn("password", {
         email: values.email,
         password: values.password,
         flow,
         ...(flow === "signUp" && values.name ? { name: values.name } : {}),
       });
+      if (!signingIn) return;
+      setLeaving(true);
       // Switching straight from a demo session keeps the open client on the
       // demo identity, so load the next page fresh with the new account.
       if (fromDemo) window.location.assign(next);
@@ -86,6 +102,7 @@ export function SignInForm() {
       setFormError(friendlyAuthError(error, flow));
     }
   });
+  const busy = isSubmitting || leaving;
 
   return (
     <div className="w-full">
@@ -138,8 +155,8 @@ export function SignInForm() {
           </p>
         )}
 
-        <Button type="submit" size="lg" disabled={isSubmitting} className="mt-1 w-full">
-          {isSubmitting && <Loader2 className="animate-spin" aria-hidden="true" />}
+        <Button type="submit" size="lg" disabled={busy} className="mt-1 w-full">
+          {busy && <Loader2 className="animate-spin" aria-hidden="true" />}
           {flow === "signIn" ? "Sign in" : "Create account"}
         </Button>
       </form>

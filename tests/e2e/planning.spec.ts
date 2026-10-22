@@ -95,3 +95,17 @@ test("a missing celebration shows a clear way back", async ({ page }) => {
   await expect(page.getByText("We couldn't find that celebration")).toBeVisible();
   await expect(page.getByRole("link", { name: "Back to your celebrations" })).toBeVisible();
 });
+
+test("ending a demo started from sign-in comes back to a ready demo button", async ({ page }) => {
+  await page.goto("/sign-in");
+  await page.getByRole("button", { name: "Explore the demo" }).click();
+  await expect(page).toHaveURL(/\/events\/[^/]+$/, { timeout: 60_000 });
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "End demo" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  // Next keeps the sign-in page's state while it's hidden; it must not come
+  // back still "Preparing the demo…".
+  await page.getByRole("link", { name: "Sign in", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page.getByRole("button", { name: "Explore the demo" })).toBeEnabled();
+});

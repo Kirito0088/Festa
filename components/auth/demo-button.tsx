@@ -28,7 +28,9 @@ export function DemoButton({
 }) {
   const { signIn } = useAuthActions();
   const { isAuthenticated } = useConvexAuth();
-  const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
+  // Subscribed while signed out too, so the demo session is recognised in the
+  // same round trip that confirms it.
+  const me = useQuery(api.users.me);
   const startDemo = useMutation(api.demo.start);
   const router = useRouter();
   const [phase, setPhase] = useState<"idle" | "signing-in" | "seeding">("idle");
@@ -47,6 +49,16 @@ export function DemoButton({
         setPhase("idle");
       });
   }, [phase, isAuthenticated, me, startDemo, router]);
+
+  // Next keeps this page's state while it's hidden behind the demo; come
+  // back to a ready button.
+  useEffect(
+    () => () => {
+      seeding.current = false;
+      setPhase("idle");
+    },
+    [],
+  );
 
   const busy = phase !== "idle";
 
