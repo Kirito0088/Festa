@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # Keeps the workflow actions on supported majors, so a runtime deprecation
+  # (like Node 20) arrives as a PR instead of a CI warning.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
