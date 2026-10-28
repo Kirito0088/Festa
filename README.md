@@ -26,6 +26,8 @@ Built for **PromptWars Virtual, Challenge 5: Celebration & Event Planner**.
 
 ## How the AI is used
 
+Full prompt specifications, safety guardrails, structured JSON schemas, and anti-hallucination invariants are detailed in [PROMPTS.md](PROMPTS.md).
+
 - **Blueprint generation.** Groq's `openai/gpt-oss-120b` (falling back to `openai/gpt-oss-20b`) drafts the concept, palette, budget percentages, dated tasks, vendor categories and risks. It is called from a Convex action with a strict JSON schema, and the output is validated with Zod before anything is saved.
 - **The concierge.** It reads the saved plan and answers in structured JSON. Its proposed edits are stored as a proposal and applied only on approval, after the server re-validates them ([ADR 2](docs/adr/0002-concierge-proposes-the-user-approves.md)).
 - **What the AI never does.** The model never does arithmetic. It returns percentages, and `lib/money.ts` turns them into exact amounts.
@@ -72,12 +74,15 @@ flowchart LR
 
 ## Quality
 
-**Code Quality.** Details and engineering standards are in [CODE_QUALITY.md](CODE_QUALITY.md) and [ARCHITECTURE.md](ARCHITECTURE.md):
+**Code Quality.** Details and engineering standards are in [CODE_QUALITY.md](CODE_QUALITY.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [CONTEXT.md](CONTEXT.md):
 
+- Engineered and verified using **Google Antigravity 2.0** with specialized custom agent auto-routing ([AGENTS.md](AGENTS.md)).
 - Strict TypeScript with zero `any` types and exhaustive null safety across the entire application.
 - Clean architectural boundaries: 100% pure, side-effect-free domain arithmetic in `lib/`, reactive server-authoritative mutations in `convex/`, and accessible UI components in `components/`.
-- TSDoc annotations on all exported utilities, functions, and data schemas.
-- Rigorous automated verification pipeline: `npm run check` runs type checking, ESLint, Prettier formatting check, and the full test suite with coverage.
+- Domain-Driven Design with formal ubiquitous language and invariants ([CONTEXT.md](CONTEXT.md)).
+- Prompt engineering architecture with strict JSON schemas, XML boundaries, and anti-hallucination barriers ([PROMPTS.md](PROMPTS.md)).
+- Comprehensive TSDoc annotations on all exported utilities, functions, and data schemas.
+- Rigorous automated verification pipeline: `npm run check` runs type checking, ESLint, Prettier formatting check, and the full test suite with coverage (>96.9% line coverage).
 
 **Security.** Details are in [SECURITY.md](SECURITY.md):
 

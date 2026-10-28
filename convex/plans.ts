@@ -144,9 +144,11 @@ export const generate = internalAction({
           } else {
             if (result.failure.kind === "rate_limited") await ctx.runMutation(internal.plans.pauseAi, {});
             notice = describeFailure(result.failure);
-            console.warn(
-              `AI blueprint fell back to template: ${result.failure.kind} (${result.failure.message})`,
-            );
+            if (!process.env.VITEST && process.env.NODE_ENV !== "test") {
+              console.warn(
+                `AI blueprint fell back to template: ${result.failure.kind} (${result.failure.message})`,
+              );
+            }
           }
         }
       }

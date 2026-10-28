@@ -105,7 +105,18 @@ Festa operates reliably even if third-party AI APIs fail, hit rate limits, or ar
 
 ## 4. Reliability & Verification Matrix
 
-- **Unit Tests:** Pure functions in `lib/` tested via Vitest with 100% coverage.
+- **Unit Tests:** Pure functions in `lib/` tested via Vitest with >96% line coverage.
 - **Integration Tests:** Convex backend functions tested via `convex-test` across all security and boundary conditions.
 - **E2E Automation:** Playwright walks critical paths (event creation, concierge chat, budget recalculation, drag-and-drop).
 - **Accessibility:** Automated WCAG 2.1 AA audits via `@axe-core/playwright`.
+
+---
+
+## 5. Architectural Standards & Specifications
+
+- **Domain Model & Ubiquitous Language:** [`CONTEXT.md`](CONTEXT.md)
+- **Prompt Engineering & AI Guardrails:** [`PROMPTS.md`](PROMPTS.md)
+- **Code Quality & Verification Gates:** [`CODE_QUALITY.md`](CODE_QUALITY.md)
+- **Google Antigravity Agent Configuration:** [`AGENTS.md`](AGENTS.md)
+- **Security Boundaries & Threat Model:** [`SECURITY.md`](SECURITY.md)
+- **Architectural Decision Records:** [`docs/adr/`](docs/adr/)

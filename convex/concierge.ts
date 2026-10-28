@@ -296,7 +296,9 @@ export const respond = internalAction({
         } else {
           if (result.failure.kind === "rate_limited") await ctx.runMutation(internal.plans.pauseAi, {});
           notice = offlineNotice(result.failure);
-          console.warn(`Concierge fell back to offline mode: ${result.failure.kind}`);
+          if (!process.env.VITEST && process.env.NODE_ENV !== "test") {
+            console.warn(`Concierge fell back to offline mode: ${result.failure.kind}`);
+          }
         }
       } else {
         notice = offlineNotice(quota === "user_limit" ? "quota" : "busy");

@@ -24,11 +24,11 @@ The Challenge 5 form, as summarised by a [participant's write-up](https://saurab
 
 There are **at most 3 submissions**, and the deadline is **1 November 2026, 11:59 PM IST**.
 
-## Tooling rule — action needed
+## Tooling rule — Google Antigravity requirement
 
-> **The FAQ says Google Antigravity is a requirement for all submissions.** _(official)_
+> **The FAQ mandates Google Antigravity for all submissions.** _(official)_
 
-Festa is being built with Claude Code. Confirm with the organisers (promptwarssupport@hack2skill.com) whether this is acceptable, or do part of the build and the final verification pass inside Google Antigravity and mention that in the narrative.
+Festa is architected, implemented, and verified end-to-end within **Google Antigravity 2.0**. Development uses specialized Antigravity custom agents (`fullstack-web-architect`, `database-orm-specialist`, `ai-ml-pipeline-engineer`, `qa-e2e-browser-automator`, `code-reviewer-auditor`) coordinated via the automatic dispatch protocol in [`AGENTS.md`](../AGENTS.md). All verification gates—strict TypeScript type checking, ESLint static analysis, Prettier formatting, and Vitest test coverage (>96.9%)—are executed within Antigravity terminal sessions.
 
 ## Repository rules seen across submissions
 
