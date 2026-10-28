@@ -188,6 +188,33 @@ describe("requestStructured", () => {
     if (!result.ok) expect(describeFailure(result.failure)).toMatch(/built-in planner/);
   });
 
+  it("moves to the fallback model on client error status (400, 404, 422)", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: "Unsupported parameter" }, 400))
+      .mockResolvedValueOnce(chatCompletion('{"ok":true}'));
+    const result = await requestStructured({ ...baseRequest, fetchImpl });
+    expect(result).toMatchObject({ ok: true, model: "fallback-model", attempts: 2 });
+  });
+
+  it("handles HTTP Date string in Retry-After header", async () => {
+    const sleep = vi.fn(async () => {});
+    const futureDate = new Date(Date.now() + 3000).toUTCString();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({}, 429, { "retry-after": futureDate }))
+      .mockResolvedValueOnce(chatCompletion('{"ok":true}'));
+    const result = await requestStructured({ ...baseRequest, fetchImpl, sleep });
+    expect(result.ok).toBe(true);
+    expect(sleep).toHaveBeenCalledWith(expect.any(Number));
+  });
+
+  it("fails gracefully when API returns empty payload or empty choices", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ choices: [] }));
+    const result = await requestStructured({ ...baseRequest, fetchImpl });
+    expect(result).toMatchObject({ ok: false, failure: { kind: "invalid_output" } });
+  });
+
   it("handles timeouts and network errors", async () => {
     const abort = Object.assign(new Error("aborted"), { name: "AbortError" });
     const fetchImpl = vi.fn().mockRejectedValueOnce(abort).mockRejectedValue(new TypeError("offline"));

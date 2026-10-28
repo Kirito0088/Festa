@@ -44,6 +44,40 @@ describe("daySchedule", () => {
     });
     expect(wedding.some((item) => item.title === "Mehendi" || item.title === "Haldi")).toBe(false);
   });
+
+  it("handles empty activities gracefully with core schedule and appropriate meal", () => {
+    const eveningSheet = daySchedule({ type: "anniversary", activities: [], guestCount: 50 });
+    expect(eveningSheet.some((i) => /dinner is served/i.test(i.title))).toBe(true);
+    expect(eveningSheet.some((i) => /guests arrive/i.test(i.title))).toBe(true);
+
+    const communitySheet = daySchedule({ type: "community", activities: [], guestCount: 150 });
+    expect(communitySheet.some((i) => /lunch is served/i.test(i.title))).toBe(true);
+    expect(communitySheet.find((i) => /lunch/i.test(i.title))?.notes).toMatch(/2 serving counters/);
+  });
+
+  it("does not insert duplicate dinner when dinner is already an explicit activity", () => {
+    const sheet = daySchedule({
+      type: "corporate",
+      activities: ["Keynote", "Awards", "Dinner", "Networking"],
+      guestCount: 200,
+    });
+    const dinnerOccurrences = sheet.filter((i) => /dinner/i.test(i.title));
+    expect(dinnerOccurrences).toHaveLength(1);
+  });
+
+  it("calculates buffet serving counters accurately based on guest count scale", () => {
+    const single = daySchedule({ type: "birthday", activities: [], guestCount: 1 });
+    expect(single.find((i) => /dinner/i.test(i.title))?.notes).toMatch(/1 serving counter\./);
+
+    const hundred = daySchedule({ type: "birthday", activities: [], guestCount: 100 });
+    expect(hundred.find((i) => /dinner/i.test(i.title))?.notes).toMatch(/1 serving counter\./);
+
+    const hundredOne = daySchedule({ type: "birthday", activities: [], guestCount: 101 });
+    expect(hundredOne.find((i) => /dinner/i.test(i.title))?.notes).toMatch(/2 serving counters\./);
+
+    const large = daySchedule({ type: "birthday", activities: [], guestCount: 550 });
+    expect(large.find((i) => /dinner/i.test(i.title))?.notes).toMatch(/6 serving counters\./);
+  });
 });
 
 describe("isScheduleTime", () => {

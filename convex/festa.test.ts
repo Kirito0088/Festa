@@ -308,6 +308,135 @@ describe("moodboard", () => {
     const items = await alice.as.query(api.moodboard.list, { eventId });
     expect(items).toHaveLength(1);
   });
+
+  it("updates and removes moodboard items with ownership enforcement", async () => {
+    const t = setup();
+    const alice = await createUser(t);
+    const bob = await createUser(t);
+    const eventId = await createEvent(alice, t);
+
+    const swatchId = await alice.as.mutation(api.moodboard.addSwatch, {
+      eventId,
+      color: "#F8F6F1",
+      title: "Ivory Base",
+      note: "Primary theme",
+    });
+
+    await alice.as.mutation(api.moodboard.update, {
+      itemId: swatchId,
+      title: "Warm Ivory",
+      note: "Updated note",
+    });
+
+    const items = await alice.as.query(api.moodboard.list, { eventId });
+    const swatch = items.find((i) => i._id === swatchId);
+    expect(swatch?.title).toBe("Warm Ivory");
+    expect(swatch?.note).toBe("Updated note");
+
+    // Bob cannot update or remove Alice's swatch
+    await expect(
+      bob.as.mutation(api.moodboard.update, { itemId: swatchId, title: "Hacked" }),
+    ).rejects.toThrow(/could not be found/);
+    await expect(bob.as.mutation(api.moodboard.remove, { itemId: swatchId })).rejects.toThrow(
+      /could not be found/,
+    );
+
+    await alice.as.mutation(api.moodboard.remove, { itemId: swatchId });
+    const remaining = await alice.as.query(api.moodboard.list, { eventId });
+    expect(remaining.some((i) => i._id === swatchId)).toBe(false);
+  });
+});
+
+describe("vendor operations", () => {
+  it("creates, validates, updates, tracks status and removes vendors", async () => {
+    const t = setup();
+    const alice = await createUser(t);
+    const bob = await createUser(t);
+    const eventId = await createEvent(alice, t);
+
+    const vendorId = await alice.as.mutation(api.vendors.create, {
+      eventId,
+      name: "Jaipur Floral Studio",
+      category: "decor",
+      contactName: "Pooja Sharma",
+      phone: "+91 98765 43210",
+      email: "pooja@jaipurflorals.in",
+      website: "jaipurflorals.in", // Tests auto-prepends https://
+      quoteEstimated: 35_000,
+      quoteActual: null,
+      status: "researching",
+      paymentStatus: "unpaid",
+      notes: "Known for marigold mandaps",
+    });
+
+    const vendors = await alice.as.query(api.vendors.list, { eventId });
+    const created = vendors.find((v) => v._id === vendorId);
+    expect(created?.name).toBe("Jaipur Floral Studio");
+    expect(created?.website).toBe("https://jaipurflorals.in");
+    expect(created?.quoteEstimated).toBe(35_000);
+
+    // Validation checks
+    await expect(
+      alice.as.mutation(api.vendors.create, {
+        eventId,
+        name: "Bad Contact",
+        category: "decor",
+        contactName: "",
+        phone: "invalid-phone",
+        email: "",
+        website: "",
+        quoteEstimated: null,
+        quoteActual: null,
+        status: "researching",
+        paymentStatus: "unpaid",
+        notes: "",
+      }),
+    ).rejects.toThrow(/valid phone/i);
+
+    await expect(
+      alice.as.mutation(api.vendors.create, {
+        eventId,
+        name: "Bad Email",
+        category: "decor",
+        contactName: "",
+        phone: "",
+        email: "not-an-email",
+        website: "",
+        quoteEstimated: null,
+        quoteActual: null,
+        status: "researching",
+        paymentStatus: "unpaid",
+        notes: "",
+      }),
+    ).rejects.toThrow(/valid email/i);
+
+    // Update status and quotes
+    await alice.as.mutation(api.vendors.update, {
+      vendorId,
+      quoteActual: 32_000,
+      status: "booked",
+      paymentStatus: "deposit",
+    });
+
+    const updated = (await alice.as.query(api.vendors.list, { eventId })).find((v) => v._id === vendorId);
+    expect(updated?.status).toBe("booked");
+    expect(updated?.paymentStatus).toBe("deposit");
+    expect(updated?.quoteActual).toBe(32_000);
+
+    // Bob cannot modify or remove Alice's vendor
+    await expect(bob.as.mutation(api.vendors.update, { vendorId, status: "declined" })).rejects.toThrow(
+      /could not be found/,
+    );
+    await expect(bob.as.mutation(api.vendors.remove, { vendorId })).rejects.toThrow(/could not be found/);
+
+    // Alice deletes vendor
+    await alice.as.mutation(api.vendors.remove, { vendorId });
+    const afterDelete = await alice.as.query(api.vendors.list, { eventId });
+    expect(afterDelete.some((v) => v._id === vendorId)).toBe(false);
+
+    const activity = await alice.as.query(api.activity.recent, { eventId });
+    expect(activity[0].message).toMatch(/Removed vendor/);
+  });
 });
 
 describe("demo sessions", () => {

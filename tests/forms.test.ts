@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { wizardSchema, type WizardValues } from "@/components/events/wizard/wizard-schema";
 import { scheduleSchema } from "@/components/timeline/schedule-schema";
+import { optionalNumber, requiredNumber } from "@/components/ui/money-input";
 import { shiftIsoDate, toIsoDate } from "@/lib/dates";
 
 const today = toIsoDate(new Date());
@@ -72,5 +73,24 @@ describe("scheduleSchema", () => {
     const messages = bad.success ? [] : bad.error.issues.map((issue) => issue.message);
     expect(messages).toContain("Choose a time, such as 18:30.");
     expect(messages).toContain("Say what happens at this time.");
+  });
+});
+
+describe("money-input number parsers", () => {
+  it("optionalNumber turns empty strings or nullish values to null", () => {
+    expect(optionalNumber("")).toBeNull();
+    expect(optionalNumber(null)).toBeNull();
+    expect(optionalNumber(undefined)).toBeNull();
+    expect(optionalNumber("5000")).toBe(5000);
+    expect(optionalNumber(12500)).toBe(12500);
+    expect(optionalNumber("not-a-number")).toBeNaN();
+  });
+
+  it("requiredNumber turns empty strings or nullish values to NaN", () => {
+    expect(requiredNumber("")).toBeNaN();
+    expect(requiredNumber(null)).toBeNaN();
+    expect(requiredNumber(undefined)).toBeNaN();
+    expect(requiredNumber("25000")).toBe(25000);
+    expect(requiredNumber(0)).toBe(0);
   });
 });

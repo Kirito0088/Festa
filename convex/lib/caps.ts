@@ -17,49 +17,53 @@ const CAPS: Record<CappedTable, { max: number; noun: string }> = {
   scheduleItems: { max: LIMITS.scheduleMax, noun: "moments on the day's schedule" },
 };
 
+type TableQueryFn = (ctx: MutationCtx, eventId: Id<"events">, max: number) => Promise<number>;
+
+const TABLE_QUERIES: Record<CappedTable, TableQueryFn> = {
+  tasks: async (ctx, eventId, max) =>
+    (
+      await ctx.db
+        .query("tasks")
+        .withIndex("by_eventId_and_order", (q) => q.eq("eventId", eventId))
+        .take(max)
+    ).length,
+  scheduleItems: async (ctx, eventId, max) =>
+    (
+      await ctx.db
+        .query("scheduleItems")
+        .withIndex("by_eventId_and_time", (q) => q.eq("eventId", eventId))
+        .take(max)
+    ).length,
+  budgetItems: async (ctx, eventId, max) =>
+    (
+      await ctx.db
+        .query("budgetItems")
+        .withIndex("by_eventId", (q) => q.eq("eventId", eventId))
+        .take(max)
+    ).length,
+  vendors: async (ctx, eventId, max) =>
+    (
+      await ctx.db
+        .query("vendors")
+        .withIndex("by_eventId", (q) => q.eq("eventId", eventId))
+        .take(max)
+    ).length,
+  moodboardItems: async (ctx, eventId, max) =>
+    (
+      await ctx.db
+        .query("moodboardItems")
+        .withIndex("by_eventId", (q) => q.eq("eventId", eventId))
+        .take(max)
+    ).length,
+};
+
 async function countUpTo(
   ctx: MutationCtx,
   table: CappedTable,
   eventId: Id<"events">,
   max: number,
 ): Promise<number> {
-  switch (table) {
-    case "tasks":
-      return (
-        await ctx.db
-          .query("tasks")
-          .withIndex("by_eventId_and_order", (q) => q.eq("eventId", eventId))
-          .take(max)
-      ).length;
-    case "scheduleItems":
-      return (
-        await ctx.db
-          .query("scheduleItems")
-          .withIndex("by_eventId_and_time", (q) => q.eq("eventId", eventId))
-          .take(max)
-      ).length;
-    case "budgetItems":
-      return (
-        await ctx.db
-          .query("budgetItems")
-          .withIndex("by_eventId", (q) => q.eq("eventId", eventId))
-          .take(max)
-      ).length;
-    case "vendors":
-      return (
-        await ctx.db
-          .query("vendors")
-          .withIndex("by_eventId", (q) => q.eq("eventId", eventId))
-          .take(max)
-      ).length;
-    case "moodboardItems":
-      return (
-        await ctx.db
-          .query("moodboardItems")
-          .withIndex("by_eventId", (q) => q.eq("eventId", eventId))
-          .take(max)
-      ).length;
-  }
+  return TABLE_QUERIES[table](ctx, eventId, max);
 }
 
 /** Whether the celebration can take one more record of this kind. */
