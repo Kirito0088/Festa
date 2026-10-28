@@ -5,7 +5,12 @@ export type ScheduleEntry = { time: string; title: string; notes: string };
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-/** A 24-hour "HH:MM" time of day. */
+/**
+ * Validates whether a string is a 24-hour "HH:MM" schedule time.
+ *
+ * @param value - Candidate time string.
+ * @returns True if valid 24-hour time.
+ */
 export function isScheduleTime(value: string): boolean {
   return TIME.test(value);
 }
@@ -63,10 +68,11 @@ function clock(minutes: number): string {
 }
 
 /**
- * A run sheet for the day itself: setup, the guests' arrival, each chosen
- * activity in its natural order, a meal sized for the guest list, the
- * send-off and pack-up. Deterministic, so it works without AI and the user
- * can edit every line afterwards.
+ * Drafts an initial day-of schedule: setup, arrival, sequenced activities, meal timings, and send-off.
+ * Purely deterministic logic based on event type, activities, and guest count.
+ *
+ * @param input - Celebration type, activities, and guest count.
+ * @returns Ordered array of initial ScheduleEntry objects.
  */
 export function daySchedule(input: Pick<PlanInput, "type" | "activities" | "guestCount">): ScheduleEntry[] {
   const welcome = WELCOME_AT[input.type];

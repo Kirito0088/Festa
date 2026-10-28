@@ -9,11 +9,22 @@ export type BudgetLine = {
   paid: number;
 };
 
-/** The amount a line will really cost: its actual cost once known. */
+/**
+ * Calculates the committed cost of a budget item.
+ *
+ * @param line - The budget line to evaluate.
+ * @returns The actual cost if known, otherwise the original estimate.
+ */
 export function committedCost(line: BudgetLine): number {
   return line.actual ?? line.estimated;
 }
 
+/**
+ * Determines the payment status for a budget line.
+ *
+ * @param line - The budget line to check.
+ * @returns "unpaid" if paid is 0, "paid" if paid meets or exceeds committed cost, or "deposit".
+ */
 export function paymentStatusOf(line: BudgetLine): PaymentStatus {
   const committed = committedCost(line);
   if (line.paid <= 0) return "unpaid";
@@ -21,6 +32,12 @@ export function paymentStatusOf(line: BudgetLine): PaymentStatus {
   return "deposit";
 }
 
+/**
+ * Checks whether an item's actual expenditure exceeds its initial estimate.
+ *
+ * @param line - The budget line to check.
+ * @returns True if actual cost is known and strictly greater than estimated.
+ */
 export function isLineOverspent(line: BudgetLine): boolean {
   return line.actual !== null && toMinor(line.actual) > toMinor(line.estimated);
 }
@@ -56,6 +73,13 @@ export type BudgetSummary = {
   categories: CategorySummary[];
 };
 
+/**
+ * Computes a comprehensive financial breakdown of the celebration in a single O(N) pass.
+ *
+ * @param total - Target event budget.
+ * @param lines - All current budget items.
+ * @returns Summary containing committed costs, utilization, remaining balances, and category breakdown.
+ */
 export function summarizeBudget(total: number, lines: readonly BudgetLine[]): BudgetSummary {
   let estimated = 0;
   let actual = 0;

@@ -43,6 +43,19 @@ describe("task ordering", () => {
     expect(sortTasks(resolved, "manual").map((t) => t._id)).toEqual(["a", "b", "c", "d", "e"]);
   });
 
+  it("breaks ties by secondary and tertiary criteria", () => {
+    // Same due date, different priorities
+    const t1 = { ...task({ _id: "1", priority: "low", order: 10 }), due: "2027-02-01" };
+    const t2 = { ...task({ _id: "2", priority: "high", order: 20 }), due: "2027-02-01" };
+    const t3 = { ...task({ _id: "3", priority: "high", order: 30 }), due: "2027-02-01" };
+    expect(sortTasks([t1, t2, t3], "due").map((t) => t._id)).toEqual(["2", "3", "1"]);
+
+    // Same priority, different due dates and orders
+    const p1 = { ...task({ _id: "p1", priority: "high", order: 20 }), due: "2027-02-01" };
+    const p2 = { ...task({ _id: "p2", priority: "high", order: 10 }), due: "2027-02-01" };
+    expect(sortTasks([p1, p2], "priority").map((t) => t._id)).toEqual(["p2", "p1"]);
+  });
+
   it("lists upcoming open tasks with deadlines", () => {
     expect(upcomingTasks(resolved, 2).map((t) => t._id)).toEqual(["c", "b"]);
   });
@@ -75,5 +88,7 @@ describe("isSafeImageUrl", () => {
     expect(isSafeImageUrl("javascript:alert(1)")).toBe(false);
     expect(isSafeImageUrl('https://x.com/a.jpg" onerror="alert(1)')).toBe(false);
     expect(isSafeImageUrl("data:image/png;base64,AAAA")).toBe(false);
+    expect(isSafeImageUrl("https://[")).toBe(false);
+    expect(isSafeImageUrl("https://" + "a".repeat(2005))).toBe(false);
   });
 });

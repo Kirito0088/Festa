@@ -11,9 +11,11 @@ export const SITE_DESCRIPTION =
 const UNSAFE_PATH = /[\u0000-\u001f\u007f\\]/;
 
 /**
- * Where to go after signing in. Only same-site paths are allowed, so a
- * crafted link can't send anyone elsewhere. The sign-in page itself is
- * refused too, since the form would wait there forever.
+ * Validates and sanitizes a post-sign-in redirect path to guarantee same-site navigation.
+ * Refuses protocol-relative URLs (`//`), open redirects, control characters, backslashes, and loops back to `/sign-in`.
+ *
+ * @param value - Candidate URL or path string.
+ * @returns Safe internal path (defaults to `/events`).
  */
 export function safeNext(value: string | null): string {
   if (!value || !value.startsWith("/") || value.startsWith("//") || UNSAFE_PATH.test(value)) return "/events";

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { allocateByWeights, formatMoney, planningStep, sumMoney, subtractMoney } from "@/lib/money";
+import {
+  allocateByWeights,
+  currencySymbol,
+  formatMoney,
+  planningStep,
+  roundTo,
+  sumMoney,
+  subtractMoney,
+} from "@/lib/money";
 
 describe("sumMoney", () => {
   it("adds without floating-point drift", () => {
@@ -55,5 +63,33 @@ describe("formatMoney", () => {
 
   it("formats other currencies", () => {
     expect(formatMoney(5000, "USD")).toBe("$5,000");
+  });
+
+  it("supports compact formatting", () => {
+    expect(formatMoney(150_000, "INR", { compact: true })).toMatch(/1\.5L|150T|150K/i);
+    expect(formatMoney(5000, "USD", { compact: true })).toMatch(/5(\.0)?K/i);
+  });
+
+  it("falls back gracefully when an unsupported currency is passed", () => {
+    expect(formatMoney(100, "INVALID_CURRENCY_CODE")).toBeDefined();
+  });
+});
+
+describe("roundTo", () => {
+  it("rounds to nearest step", () => {
+    expect(roundTo(145, 50)).toBe(150);
+    expect(roundTo(120, 50)).toBe(100);
+  });
+
+  it("returns original amount when step is zero or negative", () => {
+    expect(roundTo(145, 0)).toBe(145);
+    expect(roundTo(145, -10)).toBe(145);
+  });
+});
+
+describe("currencySymbol", () => {
+  it("extracts the currency symbol", () => {
+    expect(currencySymbol("INR")).toBe("₹");
+    expect(currencySymbol("USD")).toBe("$");
   });
 });

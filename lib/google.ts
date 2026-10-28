@@ -10,6 +10,12 @@ function compactDate(isoDate: string): string {
   return isoDate.replaceAll("-", "");
 }
 
+/**
+ * Builds a direct Google Calendar event creation URL without requiring OAuth credentials or API keys.
+ *
+ * @param input - Event title, date, optional details, and location.
+ * @returns Fully formatted Google Calendar web URL.
+ */
 export function googleCalendarUrl(input: {
   title: string;
   date: string;
@@ -28,6 +34,12 @@ export function googleCalendarUrl(input: {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
+/**
+ * Builds a universal Google Maps search URL without requiring Maps API keys.
+ *
+ * @param query - Address, venue name, or search query.
+ * @returns Standard Google Maps universal search URL.
+ */
 export function googleMapsSearchUrl(query: string): string {
   const params = new URLSearchParams({ api: "1", query });
   return `https://www.google.com/maps/search/?${params.toString()}`;

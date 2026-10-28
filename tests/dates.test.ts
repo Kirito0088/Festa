@@ -6,6 +6,7 @@ import {
   describeOffset,
   formatIsoDate,
   isIsoDate,
+  relativeDayLabel,
   resolveDueDate,
   shiftIsoDate,
 } from "@/lib/dates";
@@ -107,5 +108,16 @@ describe("formatIsoDate", () => {
     expect(formatIsoDate("2027-01-05", "short")).toBe("5 Jan");
     expect(formatIsoDate("2027-01-05", "weekday")).toBe("Tue, 5 Jan 2027");
     expect(formatIsoDate("2027-01-05", "invitation")).toBe("Tuesday, 5 January 2027");
+  });
+});
+
+describe("relativeDayLabel", () => {
+  const today = "2027-01-10";
+  it("formats relative days naturally", () => {
+    expect(relativeDayLabel("2027-01-10", today)).toBe("Today");
+    expect(relativeDayLabel("2027-01-11", today)).toBe("Tomorrow");
+    expect(relativeDayLabel("2027-01-09", today)).toBe("Yesterday");
+    expect(relativeDayLabel("2027-01-15", today)).toBe("In 5 days");
+    expect(relativeDayLabel("2027-01-05", today)).toBe("5 days ago");
   });
 });

@@ -202,9 +202,25 @@ describe("budget operations", () => {
       }),
     ).rejects.toThrow(/positive amount/);
 
-    await alice.as.mutation(api.budget.update, { itemId, actual: 13_500 });
-    await alice.as.mutation(api.budget.recordPayment, { itemId, mode: "full" });
+    await alice.as.mutation(api.budget.update, {
+      itemId,
+      category: "catering",
+      name: "Catering advance",
+      estimated: 15_000,
+      actual: 13_500,
+      paid: 5_000,
+      notes: "Vegetarian feast",
+    });
+    await alice.as.mutation(api.budget.recordPayment, { itemId, mode: "deposit" });
     let item = (await alice.as.query(api.budget.list, { eventId })).find((i) => i._id === itemId);
+    expect(item?.paid).toBe(Math.round(13_500 * 0.3));
+
+    await alice.as.mutation(api.budget.recordPayment, { itemId, mode: "deposit", amount: 6_000 });
+    item = (await alice.as.query(api.budget.list, { eventId })).find((i) => i._id === itemId);
+    expect(item?.paid).toBe(6_000);
+
+    await alice.as.mutation(api.budget.recordPayment, { itemId, mode: "full" });
+    item = (await alice.as.query(api.budget.list, { eventId })).find((i) => i._id === itemId);
     expect(item?.paid).toBe(13_500);
 
     await alice.as.mutation(api.budget.recordPayment, { itemId, mode: "clear" });
@@ -286,6 +302,102 @@ describe("concierge", () => {
     await expect(bob.as.mutation(api.concierge.dismissProposal, { messageId: reply._id })).rejects.toThrow(
       /could not be found/,
     );
+  });
+
+  it("dismisses pending proposals and clears chat messages", async () => {
+    const t = setup();
+    const alice = await createUser(t);
+    const eventId = await createEvent(alice, t);
+
+    await alice.as.mutation(api.concierge.send, {
+      eventId,
+      content: "Cut the budget to 1.5 lakh",
+      today: TODAY,
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const messages = await alice.as.query(api.concierge.list, { eventId });
+    const reply = messages.find((m) => m.role === "assistant" && m.proposal);
+    expect(reply).toBeDefined();
+
+    await alice.as.mutation(api.concierge.dismissProposal, { messageId: reply!._id });
+    const afterDismiss = await alice.as.query(api.concierge.list, { eventId });
+    expect(afterDismiss.find((m) => m._id === reply!._id)?.proposal?.status).toBe("dismissed");
+
+    await alice.as.mutation(api.concierge.clear, { eventId });
+    const afterClear = await alice.as.query(api.concierge.list, { eventId });
+    expect(afterClear).toHaveLength(0);
+  });
+
+  it("applies add_task, add_budget_item and update_task concierge proposals", async () => {
+    const t = setup();
+    const alice = await createUser(t);
+    const eventId = await createEvent(alice, t);
+
+    const taskId = await alice.as.mutation(api.tasks.create, {
+      eventId,
+      title: "Existing task",
+      notes: "",
+      category: "other",
+      priority: "low",
+      dueMode: "relative",
+      offsetDays: 10,
+    });
+
+    const messageId = await t.run((ctx) =>
+      ctx.db.insert("conciergeMessages", {
+        eventId,
+        ownerId: alice.userId,
+        role: "assistant",
+        content: "Proposals for you.",
+        status: "done",
+        engine: "offline",
+        proposal: {
+          title: "Comprehensive updates",
+          status: "pending",
+          changes: [
+            {
+              type: "add_budget_item",
+              name: "Welcome gifts",
+              category: "guests",
+              estimated: 10_000,
+              reason: "For out of town guests",
+            },
+            {
+              type: "add_task",
+              title: "Pick up gift bags",
+              category: "guests",
+              priority: "high",
+              offsetDays: 3,
+              reason: "Need bags early",
+            },
+            {
+              type: "update_task",
+              taskId,
+              priority: "high",
+              offsetDays: 7,
+              reason: "Bump priority",
+            },
+          ],
+        },
+      }),
+    );
+
+    const result = await alice.as.mutation(api.concierge.applyProposal, {
+      messageId,
+      changeIndexes: [0, 1, 2],
+      today: TODAY,
+    });
+    expect(result.applied).toBe(3);
+
+    const tasks = await alice.as.query(api.tasks.list, { eventId });
+    expect(tasks.some((t) => t.title === "Pick up gift bags")).toBe(true);
+    const updated = tasks.find((t) => t._id === taskId);
+    expect(updated?.priority).toBe("high");
+    expect(updated?.offsetDays).toBe(7);
+
+    const budget = await alice.as.query(api.budget.list, { eventId });
+    expect(budget.some((b) => b.name === "Welcome gifts")).toBe(true);
   });
 });
 
@@ -464,14 +576,59 @@ describe("cascading delete", () => {
     const t = setup();
     const alice = await createUser(t);
     const eventId: Id<"events"> = await createEvent(alice, t);
+
+    // Add records to every event table to test full cascade
+    await alice.as.mutation(api.vendors.create, {
+      eventId,
+      name: "Vendor To Delete",
+      category: "other",
+      status: "researching",
+      contactName: "",
+      phone: "",
+      email: "",
+      website: "",
+      quoteEstimated: null,
+      quoteActual: null,
+      paymentStatus: "unpaid",
+      notes: "",
+    });
+    await alice.as.mutation(api.moodboard.addSwatch, {
+      eventId,
+      color: "#112233",
+      title: "Palette",
+      note: "",
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("conciergeMessages", {
+        eventId,
+        ownerId: alice.userId,
+        role: "user",
+        content: "Hello",
+        status: "done",
+      });
+    });
+
     await alice.as.mutation(api.events.remove, { eventId });
     const leftovers = await t.run(async (ctx) => ({
       items: await ctx.db.query("budgetItems").collect(),
       tasks: await ctx.db.query("tasks").collect(),
+      vendors: await ctx.db.query("vendors").collect(),
+      moodboard: await ctx.db.query("moodboardItems").collect(),
+      concierge: await ctx.db.query("conciergeMessages").collect(),
+      schedule: await ctx.db.query("scheduleItems").collect(),
       blueprints: await ctx.db.query("blueprints").collect(),
       activity: await ctx.db.query("activity").collect(),
     }));
-    expect(leftovers).toEqual({ items: [], tasks: [], blueprints: [], activity: [] });
+    expect(leftovers).toEqual({
+      items: [],
+      tasks: [],
+      vendors: [],
+      moodboard: [],
+      concierge: [],
+      schedule: [],
+      blueprints: [],
+      activity: [],
+    });
   });
 });
 
@@ -751,5 +908,183 @@ describe("per-event caps", () => {
     });
     expect(result).toEqual({ applied: 1, skipped: 1 });
     expect(await owner.as.query(api.tasks.list, { eventId })).toHaveLength(LIMITS.listMax);
+  });
+});
+
+describe("task operations", () => {
+  it("creates, updates, completes and removes tasks with validation", async () => {
+    const t = setup();
+    const alice = await createUser(t);
+    const eventId = await createEvent(alice, t);
+
+    // Create relative task
+    const taskId1 = await alice.as.mutation(api.tasks.create, {
+      eventId,
+      title: "Order invitations",
+      notes: "Sample prints first",
+      category: "invitations",
+      priority: "high",
+      dueMode: "relative",
+      offsetDays: 30,
+    });
+    expect(taskId1).toBeDefined();
+
+    // Create fixed task
+    const taskId2 = await alice.as.mutation(api.tasks.create, {
+      eventId,
+      title: "Pay venue advance",
+      notes: "",
+      category: "venue",
+      priority: "medium",
+      dueMode: "fixed",
+      dueDate: "2026-11-15",
+    });
+    expect(taskId2).toBeDefined();
+
+    // Create undated task
+    const taskId3 = await alice.as.mutation(api.tasks.create, {
+      eventId,
+      title: "Choose playlist songs",
+      notes: "",
+      category: "entertainment",
+      priority: "low",
+      dueMode: "none",
+    });
+    expect(taskId3).toBeDefined();
+
+    // Validations: relative without offsetDays throws
+    await expect(
+      alice.as.mutation(api.tasks.create, {
+        eventId,
+        title: "Bad relative",
+        notes: "",
+        category: "other",
+        priority: "low",
+        dueMode: "relative",
+      }),
+    ).rejects.toThrow(/how long before/);
+
+    // Validations: out of range offsetDays throws
+    await expect(
+      alice.as.mutation(api.tasks.create, {
+        eventId,
+        title: "Bad offset range",
+        notes: "",
+        category: "other",
+        priority: "low",
+        dueMode: "relative",
+        offsetDays: -5,
+      }),
+    ).rejects.toThrow(/Deadlines can be between/);
+
+    // Validations: fixed without dueDate throws
+    await expect(
+      alice.as.mutation(api.tasks.create, {
+        eventId,
+        title: "Bad fixed",
+        notes: "",
+        category: "other",
+        priority: "low",
+        dueMode: "fixed",
+      }),
+    ).rejects.toThrow(/due date/);
+
+    // List tasks
+    const tasks = await alice.as.query(api.tasks.list, { eventId });
+    expect(tasks.some((t) => t._id === taskId1)).toBe(true);
+
+    // Update task
+    await alice.as.mutation(api.tasks.update, {
+      taskId: taskId1,
+      title: "Order printed invitations",
+      priority: "medium",
+      notes: "Gold foil finish",
+      dueMode: "relative",
+      offsetDays: 25,
+    });
+    let updatedTasks = await alice.as.query(api.tasks.list, { eventId });
+    const updated = updatedTasks.find((t) => t._id === taskId1);
+    expect(updated?.title).toBe("Order printed invitations");
+    expect(updated?.priority).toBe("medium");
+    expect(updated?.offsetDays).toBe(25);
+
+    // Complete and uncomplete task
+    await alice.as.mutation(api.tasks.setCompleted, { taskId: taskId1, completed: true });
+    updatedTasks = await alice.as.query(api.tasks.list, { eventId });
+    expect(updatedTasks.find((t) => t._id === taskId1)?.completed).toBe(true);
+    expect(updatedTasks.find((t) => t._id === taskId1)?.completedAt).toBeDefined();
+
+    // Idempotent completion check
+    await alice.as.mutation(api.tasks.setCompleted, { taskId: taskId1, completed: true });
+
+    await alice.as.mutation(api.tasks.setCompleted, { taskId: taskId1, completed: false });
+    updatedTasks = await alice.as.query(api.tasks.list, { eventId });
+    expect(updatedTasks.find((t) => t._id === taskId1)?.completed).toBe(false);
+
+    // Remove task
+    await alice.as.mutation(api.tasks.remove, { taskId: taskId1 });
+    updatedTasks = await alice.as.query(api.tasks.list, { eventId });
+    expect(updatedTasks.some((t) => t._id === taskId1)).toBe(false);
+  });
+});
+
+describe("event management", () => {
+  it("updates celebration details, prevents rapid duplicates, and supports deletion", async () => {
+    const t = setup();
+    const alice = await createUser(t);
+    const eventId = await createEvent(alice, t);
+
+    // Duplicate prevention within 60s
+    const dupId = await alice.as.mutation(api.events.create, { ...eventArgs, useAI: false });
+    expect(dupId).toBe(eventId);
+
+    // Update event details
+    await alice.as.mutation(api.events.update, {
+      eventId,
+      name: "Meera & Kabir's Royal Engagement",
+      guestCount: 150,
+      budget: 250_000,
+      date: "2027-01-15",
+    });
+
+    const eventData = await alice.as.query(api.events.get, { eventId });
+    expect(eventData?.event.name).toBe("Meera & Kabir's Royal Engagement");
+    expect(eventData?.event.guestCount).toBe(150);
+    expect(eventData?.event.budget).toBe(250_000);
+    expect(eventData?.event.date).toBe("2027-01-15");
+
+    // List events
+    const list = await alice.as.query(api.events.list, {});
+    expect(list.some((e) => e._id === eventId)).toBe(true);
+  });
+});
+
+describe("user profile", () => {
+  it("returns user profile when authenticated and null when unauthenticated", async () => {
+    const t = setup();
+    const alice = await createUser(t, { isAnonymous: false, email: "alice@example.com" });
+    const profile = await alice.as.query(api.users.me, {});
+    expect(profile).toMatchObject({
+      email: "alice@example.com",
+      isDemo: false,
+    });
+
+    const unauth = await t.query(api.users.me, {});
+    expect(unauth).toBeNull();
+  });
+});
+
+describe("plan status", () => {
+  it("marks a plan as failed", async () => {
+    const t = setup();
+    const alice = await createUser(t);
+    const eventId = await createEvent(alice, t);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch("events", eventId, { planStatus: "generating" });
+    });
+    await t.mutation(internal.plans.markFailed, { eventId });
+    const data = await alice.as.query(api.events.get, { eventId });
+    expect(data?.event.planStatus).toBe("failed");
   });
 });

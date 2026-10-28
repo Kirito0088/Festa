@@ -182,3 +182,58 @@ describe("parseConciergeResponse", () => {
     ).toThrow();
   });
 });
+
+describe("previewProposal", () => {
+  it("previews adding a budget item and tasks without breaking calculations", () => {
+    const changes: ProposedChange[] = [
+      {
+        type: "set_event_budget",
+        amount: 150_000,
+        reason: "Budget adjustment",
+      },
+      {
+        type: "set_guest_count",
+        count: 75,
+        reason: "More RSVPs",
+      },
+      {
+        type: "update_budget_item",
+        itemId: "i1",
+        estimated: 35_000,
+        reason: "Venue pricing change",
+      },
+      {
+        type: "add_budget_item",
+        name: "Late night snacks",
+        category: "catering",
+        estimated: 12_000,
+        reason: "For dancing",
+      },
+      {
+        type: "add_task",
+        title: "Order midnight chai",
+        category: "catering",
+        priority: "medium",
+        offsetDays: 2,
+        reason: "Warm drinks",
+      },
+      {
+        type: "update_task",
+        taskId: "task1",
+        priority: "high",
+        offsetDays: 5,
+        reason: "Earlier deadline",
+      },
+    ];
+
+    const preview = previewProposal(changes, {
+      budget: 100_000,
+      guestCount: 50,
+      items: [{ id: "i1", category: "venue", estimated: 30_000, actual: null, paid: 0 }],
+    });
+
+    expect(preview.after.committed).toBe(47_000);
+    expect(preview.budgetAfter).toBe(150_000);
+    expect(preview.guestsAfter).toBe(75);
+  });
+});

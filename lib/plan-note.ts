@@ -18,9 +18,10 @@ export type PlanNoteInput = {
 };
 
 /**
- * A short note on where the plan stands, in the voice of a friend who has
- * been keeping an eye on it: the countdown, then the most pressing task
- * news, then the budget. Each entry is one sentence.
+ * Generates an empathetic, conversational plan summary snapshot in natural human sentences.
+ *
+ * @param input - Plan metrics including countdown, overdue counts, tasks due soon, and budget health.
+ * @returns Array of readable sentences describing current state and immediate actions.
  */
 export function planNote(input: PlanNoteInput): string[] {
   const { countdown, overdue, dueSoon, openTasks, budget, currency } = input;

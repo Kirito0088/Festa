@@ -7,6 +7,13 @@ import { addDays, differenceInCalendarDays, format, isValid, parse, subDays } fr
  */
 export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Parses an ISO date string (YYYY-MM-DD) into a native Date object.
+ *
+ * @param value - ISO date string.
+ * @returns Parsed Date object.
+ * @throws Error if string is not a valid calendar date.
+ */
 export function parseIsoDate(value: string): Date {
   const date = parse(value, "yyyy-MM-dd", new Date(2000, 0, 1));
   if (!ISO_DATE.test(value) || !isValid(date)) {
@@ -15,23 +22,56 @@ export function parseIsoDate(value: string): Date {
   return date;
 }
 
+/**
+ * Validates whether a string is a valid ISO calendar date.
+ *
+ * @param value - Date string to test.
+ * @returns True if the string is formatted as YYYY-MM-DD and represents a real calendar date.
+ */
 export function isIsoDate(value: string): boolean {
   if (!ISO_DATE.test(value)) return false;
   return isValid(parse(value, "yyyy-MM-dd", new Date(2000, 0, 1)));
 }
 
+/**
+ * Formats a Date object to an ISO calendar date string (YYYY-MM-DD).
+ *
+ * @param date - Input date object.
+ * @returns YYYY-MM-DD string representation.
+ */
 export function toIsoDate(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
 
+/**
+ * Shifts an ISO date string by a given number of days.
+ *
+ * @param value - Initial ISO date string.
+ * @param days - Number of days to add (positive) or subtract (negative).
+ * @returns New ISO date string.
+ */
 export function shiftIsoDate(value: string, days: number): string {
   return toIsoDate(addDays(parseIsoDate(value), days));
 }
 
+/**
+ * Computes the signed number of calendar days from one ISO date to another.
+ *
+ * @param from - Start date string.
+ * @param to - End date string.
+ * @returns Calendar day difference (positive if `to` is in the future).
+ */
 export function daysBetween(from: string, to: string): number {
   return differenceInCalendarDays(parseIsoDate(to), parseIsoDate(from));
 }
 
+/**
+ * Formats an ISO date into human-readable strings according to the requested pattern.
+ *
+ * @param value - ISO date string.
+ * @param pattern - Display format pattern ("long", "short", "weekday", "invitation").
+ * @returns Human-friendly formatted date string.
+ */
 export function formatIsoDate(
   value: string,
   pattern: "long" | "short" | "weekday" | "invitation" = "long",

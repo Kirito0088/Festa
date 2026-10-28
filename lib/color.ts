@@ -17,15 +17,24 @@ function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** WCAG 2.x contrast ratio between two hex colours. */
+/**
+ * Calculates the WCAG 2.x relative luminance contrast ratio between two hex colors.
+ *
+ * @param a - First hex color string (#RGB or #RRGGBB).
+ * @param b - Second hex color string (#RGB or #RRGGBB).
+ * @returns Contrast ratio from 1.0 to 21.0.
+ */
 export function contrastRatio(a: string, b: string): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
 
 /**
- * The first palette colour dark enough to set text in on a card (AA, 4.5:1),
- * so stamps and accents wear the celebration's own colours. Falls back to ink.
+ * Finds the first palette color that meets WCAG AA (4.5:1) text contrast on the card background,
+ * allowing celebrations to theme accents and postmarks while guaranteeing legibility.
+ *
+ * @param palette - Array of candidate hex colors.
+ * @returns Accessible hex color or default brand INK.
  */
 export function inkFromPalette(palette: readonly string[]): string {
   return palette.find((hex) => HEX.test(hex) && contrastRatio(hex, CARD) >= 4.5) ?? INK;

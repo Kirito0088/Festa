@@ -86,7 +86,13 @@ function offset(value: number | null): number | null {
   return Math.min(LIMITS.offsetDaysMax, Math.max(0, Math.round(value)));
 }
 
-/** Converts one raw change into a validated change, or `null` to drop it. */
+/**
+ * Converts one raw change suggested by the AI into a strictly validated change, or `null` to drop it.
+ *
+ * @param raw - Unverified change object from LLM output.
+ * @param ctx - Context containing known valid budgetItemIds and taskIds.
+ * @returns Fully validated ProposedChange, or null if invalid or references missing records.
+ */
 export function normalizeChange(raw: RawChange, ctx: ProposalContext): ProposedChange | null {
   const reason = text(raw.reason, 280);
   switch (raw.type) {
@@ -152,6 +158,10 @@ function changeKey(change: ProposedChange): string {
  * Validates a model proposal against the event's real records. Unknown IDs,
  * negative money and malformed values are dropped; duplicates keep the last
  * suggestion. Returns `null` when nothing valid remains.
+ *
+ * @param raw - Raw proposal from LLM output.
+ * @param ctx - Context containing known budgetItemIds and taskIds.
+ * @returns Sanitized Proposal with deduplicated, valid changes, or null.
  */
 export function normalizeProposal(raw: ConciergeResponse["proposal"], ctx: ProposalContext): Proposal | null {
   if (!raw) return null;
@@ -165,6 +175,13 @@ export function normalizeProposal(raw: ConciergeResponse["proposal"], ctx: Propo
   return { title: text(raw.title, 120) || "Suggested changes", changes };
 }
 
+/**
+ * Parses and schema-validates raw text output from the Concierge LLM.
+ *
+ * @param textValue - Raw JSON string from the LLM.
+ * @returns Validated ConciergeResponse object.
+ * @throws Error if the string is malformed JSON or fails schema validation.
+ */
 export function parseConciergeResponse(textValue: string): ConciergeResponse {
   let data: unknown;
   try {

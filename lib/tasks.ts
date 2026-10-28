@@ -15,7 +15,14 @@ export type TaskLike = {
 
 export type ResolvedTask<T extends TaskLike> = T & { due: string | null; state: DeadlineState };
 
-/** Adds each task's concrete due date and deadline state. */
+/**
+ * Resolves each task's concrete due date and deadline urgency state relative to the event date and today.
+ *
+ * @param tasks - List of tasks to evaluate.
+ * @param eventDate - ISO celebration date.
+ * @param today - Current ISO calendar date.
+ * @returns Array of tasks augmented with resolved `due` and `state` fields.
+ */
 export function resolveTasks<T extends TaskLike>(
   tasks: readonly T[],
   eventDate: string,
@@ -31,6 +38,13 @@ const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 export type TaskSort = "due" | "priority" | "manual";
 
+/**
+ * Sorts tasks by the specified strategy (due date, priority, or manual order).
+ *
+ * @param tasks - Tasks to sort.
+ * @param sort - Sorting mode.
+ * @returns New sorted array of tasks.
+ */
 export function sortTasks<T extends TaskLike & { due: string | null }>(
   tasks: readonly T[],
   sort: TaskSort,

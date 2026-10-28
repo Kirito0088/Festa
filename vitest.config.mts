@@ -11,7 +11,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["lib/**/*.ts", "convex/**/*.ts", "components/**/*-schema.ts"],
-      exclude: ["convex/_generated/**", "**/*.test.ts", "**/*.config.ts"],
+      exclude: [
+        "convex/_generated/**",
+        "**/*.test.ts",
+        "**/*.config.ts",
+        "convex/schema.ts",
+        "convex/http.ts",
+        "convex/auth.ts",
+      ],
       reporter: ["text-summary", "html"],
     },
     projects: [

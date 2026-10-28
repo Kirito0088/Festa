@@ -72,6 +72,13 @@ flowchart LR
 
 ## Quality
 
+**Code Quality.** Details and engineering standards are in [CODE_QUALITY.md](CODE_QUALITY.md) and [ARCHITECTURE.md](ARCHITECTURE.md):
+
+- Strict TypeScript with zero `any` types and exhaustive null safety across the entire application.
+- Clean architectural boundaries: 100% pure, side-effect-free domain arithmetic in `lib/`, reactive server-authoritative mutations in `convex/`, and accessible UI components in `components/`.
+- TSDoc annotations on all exported utilities, functions, and data schemas.
+- Rigorous automated verification pipeline: `npm run check` runs type checking, ESLint, Prettier formatting check, and the full test suite with coverage.
+
 **Security.** Details are in [SECURITY.md](SECURITY.md):
 
 - Secrets live only in Convex environment variables.

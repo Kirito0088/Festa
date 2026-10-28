@@ -238,3 +238,23 @@ describe("estimateTokens", () => {
     expect(estimateTokens(blueprintMessages({ ...input, notes }, "2026-10-20"), 5000)).toBeLessThan(7000);
   });
 });
+
+describe("describeFailure", () => {
+  it("provides helpful messages for every failure kind", () => {
+    expect(describeFailure({ kind: "missing_key", message: "no key" })).toMatch(/not configured/);
+    expect(describeFailure({ kind: "unauthorized", message: "unauthorized" })).toMatch(
+      /rejected this deployment's credentials/,
+    );
+    expect(describeFailure({ kind: "rate_limited", retryAfterMs: 60000, message: "rate limited" })).toMatch(
+      /busy right now/,
+    );
+    expect(describeFailure({ kind: "timeout", message: "timeout" })).toMatch(/did not respond in time/);
+    expect(describeFailure({ kind: "network", message: "network" })).toMatch(/did not respond in time/);
+    expect(describeFailure({ kind: "http", status: 500, message: "server error" })).toMatch(
+      /did not respond in time/,
+    );
+    expect(describeFailure({ kind: "invalid_output", message: "invalid" })).toMatch(
+      /did not pass validation/,
+    );
+  });
+});

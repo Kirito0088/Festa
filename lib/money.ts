@@ -3,29 +3,65 @@
  * (paise, cents) so totals never drift because of floating point.
  */
 
+/**
+ * Converts a major currency unit to minor integer units (e.g. rupees to paise, dollars to cents).
+ *
+ * @param amount - Currency amount in major units.
+ * @returns Integer minor units.
+ */
 export function toMinor(amount: number): number {
   return Math.round(amount * 100);
 }
 
+/**
+ * Converts minor integer units back to major currency units.
+ *
+ * @param minor - Integer minor units.
+ * @returns Major units floating point representation.
+ */
 export function fromMinor(minor: number): number {
   return minor / 100;
 }
 
+/**
+ * Sums an array of currency amounts without floating-point drift.
+ *
+ * @param values - Array of amounts in major currency units.
+ * @returns Exact sum in major units.
+ */
 export function sumMoney(values: readonly number[]): number {
   return fromMinor(values.reduce((total, value) => total + toMinor(value), 0));
 }
 
+/**
+ * Subtracts one currency amount from another safely in minor units.
+ *
+ * @param a - Minuend.
+ * @param b - Subtrahend.
+ * @returns Difference in major units.
+ */
 export function subtractMoney(a: number, b: number): number {
   return fromMinor(toMinor(a) - toMinor(b));
 }
 
-/** Rounds to the nearest `step` (e.g. ₹100) without going below zero. */
+/**
+ * Rounds an amount to the nearest `step` without dropping below zero.
+ *
+ * @param amount - Initial amount.
+ * @param step - Rounding step unit.
+ * @returns Non-negative rounded amount.
+ */
 export function roundTo(amount: number, step: number): number {
   if (step <= 0) return amount;
   return Math.max(0, Math.round(amount / step) * step);
 }
 
-/** A "nice" rounding step for planning estimates of a given total. */
+/**
+ * Computes an appropriate rounding granularity based on overall budget size.
+ *
+ * @param total - Total celebration budget.
+ * @returns Recommended rounding step.
+ */
 export function planningStep(total: number): number {
   if (total >= 1_000_000) return 1000;
   if (total >= 100_000) return 500;

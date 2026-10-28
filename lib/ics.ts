@@ -5,6 +5,12 @@ import { shiftIsoDate } from "./dates";
  * Apple and Outlook calendars all import. Each task becomes an all-day
  * event on its due date with an alert at 18:00 the evening before.
  */
+/**
+ * Generates an RFC 5545 compliant iCalendar (.ics) string with task deadlines and alarms.
+ *
+ * @param input - Event title, task list, and current timestamp.
+ * @returns RFC 5545 formatted .ics file content with folded CRLF lines.
+ */
 export function remindersCalendar(input: {
   eventName: string;
   tasks: readonly { id: string; title: string; due: string; notes: string }[];

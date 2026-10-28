@@ -85,9 +85,12 @@ function clampDays(days: number): number {
 }
 
 /**
- * Cleans a schema-valid blueprint: trims text, drops malformed colours and
- * non-positive shares, de-duplicates, caps list sizes and clamps deadlines.
- * Throws when too little usable content survives.
+ * Sanitizes and normalizes a schema-valid blueprint: trims text, drops malformed colors and
+ * non-positive shares, de-duplicates entities, caps list sizes, and clamps task deadlines.
+ *
+ * @param raw - Validated blueprint from LLM output.
+ * @returns Cleaned, constrained blueprint ready for database storage.
+ * @throws {BlueprintValidationError} When insufficient valid content survives normalization.
  */
 export function normalizeBlueprint(raw: Blueprint): Blueprint {
   const palette = uniqueBy(
